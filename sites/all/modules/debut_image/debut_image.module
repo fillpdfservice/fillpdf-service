@@ -1,0 +1,20 @@
+<?php
+
+include_once('debut_image.features.inc');
+
+/**
+ * Load advanced help provided by helpinject.
+ */
+include_once('debut_image.helpinjector.inc');
+
+/**
+ * Implementation of hook_nodeapi().
+ */
+function debut_image_nodeapi(&$node, $op, $teaser, $page) {
+  switch ($op) {
+    case 'view':
+      drupal_add_css(drupal_get_path('module', 'debut_image') . '/debut_image.css');
+      break;
+  }
+}
+

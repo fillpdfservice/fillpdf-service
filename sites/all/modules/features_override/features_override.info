@@ -1,0 +1,14 @@
+name = Features override
+description = "Create, export, and use overides to features components, allowing one feature to extend another."
+core = 6.x
+package = Features
+dependencies[] = ctools
+dependencies[] = features
+
+
+; Information added by drupal.org packaging script on 2011-09-08
+version = "6.x-1.x-dev"
+core = "6.x"
+project = "features_override"
+datestamp = "1315441215"
+

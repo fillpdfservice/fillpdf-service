@@ -1,0 +1,406 @@
+From 5bb29e581f329e0ac7ec1105d0b79c9bfe95ff0a Mon Sep 17 00:00:00 2001
+From: WizOne Solutions <wizonesolutions@739994.no-reply.drupal.org>
+Date: Fri, 11 Mar 2011 01:44:25 -0800
+Subject: [PATCH] Issue #1088838 by wizonesolutions: Make compatible with Views 6.x-3.0-alpha3.
+
+---
+ .../modules/debut_image/debut_image.features.inc   |    2 +-
+ sites/all/modules/debut_image/debut_image.info     |   11 +-
+ .../debut_image/debut_image.views_default.inc      |  333 +++++++-------------
+ 3 files changed, 115 insertions(+), 231 deletions(-)
+
+diff --git a/sites/all/modules/debut_image/debut_image.features.inc b/sites/all/modules/debut_image/debut_image.features.inc
+index abfe46d..440b2ea 100644
+--- a/sites/all/modules/debut_image/debut_image.features.inc
++++ b/sites/all/modules/debut_image/debut_image.features.inc
+@@ -92,6 +92,6 @@ function debut_image_node_info() {
+  */
+ function debut_image_views_api() {
+   return array(
+-    'api' => '2',
++    'api' => '3.0-alpha1',
+   );
+ }
+diff --git a/sites/all/modules/debut_image/debut_image.info b/sites/all/modules/debut_image/debut_image.info
+index 65424c0..17ee75f 100644
+--- a/sites/all/modules/debut_image/debut_image.info
++++ b/sites/all/modules/debut_image/debut_image.info
+@@ -1,4 +1,5 @@
+ core = "6.x"
++datestamp = "1298619098"
+ debutf = "1.0-draft"
+ dependencies[] = "context"
+ dependencies[] = "ctools"
+@@ -36,15 +37,9 @@ features[variable][] = "comment_subject_field_image"
+ features[variable][] = "node_options_image"
+ features[variable][] = "pathauto_node_image_pattern"
+ features[views][] = "image"
+-features[views_api][] = "api:2"
++features[views_api][] = "api:3.0-alpha1"
+ kitf = "1.0-draft"
+ name = "Debut Image"
+ package = "Features"
+ project = "debut_image"
+-
+-; Information added by drupal.org packaging script on 2011-02-25
+-version = "6.x-1.x-dev"
+-core = "6.x"
+-project = "debut_image"
+-datestamp = "1298619098"
+-
++version = "6.x-2.0-beta1"
+diff --git a/sites/all/modules/debut_image/debut_image.views_default.inc b/sites/all/modules/debut_image/debut_image.views_default.inc
+index 06a5156..d0ce68b 100644
+--- a/sites/all/modules/debut_image/debut_image.views_default.inc
++++ b/sites/all/modules/debut_image/debut_image.views_default.inc
+@@ -14,236 +14,125 @@ function debut_image_views_default_views() {
+   $view->view_php = '';
+   $view->base_table = 'node';
+   $view->is_cacheable = FALSE;
+-  $view->api_version = 2;
++  $view->api_version = 3.0-alpha1;
+   $view->disabled = FALSE; /* Edit this to true to make a default view disabled initially */
++  
++/* Display: Defaults */
+   $handler = $view->new_display('default', 'Defaults', 'default');
+-  $handler->override_option('fields', array(
+-    'field_image_fid' => array(
+-      'label' => '',
+-      'alter' => array(
+-        'alter_text' => 0,
+-        'text' => '',
+-        'make_link' => 0,
+-        'path' => '',
+-        'link_class' => '',
+-        'alt' => '',
+-        'prefix' => '',
+-        'suffix' => '',
+-        'target' => '',
+-        'help' => '',
+-        'trim' => 0,
+-        'max_length' => '',
+-        'word_boundary' => 1,
+-        'ellipsis' => 1,
+-        'html' => 0,
+-        'strip_tags' => 0,
+-      ),
+-      'empty' => '',
+-      'hide_empty' => 0,
+-      'empty_zero' => 0,
+-      'link_to_node' => 0,
+-      'label_type' => 'none',
+-      'format' => 'medium_linked',
+-      'multiple' => array(
+-        'group' => TRUE,
+-        'multiple_number' => '',
+-        'multiple_from' => '',
+-        'multiple_reversed' => FALSE,
+-      ),
+-      'exclude' => 0,
+-      'id' => 'field_image_fid',
+-      'table' => 'node_data_field_image',
+-      'field' => 'field_image_fid',
+-      'relationship' => 'none',
+-    ),
+-    'title' => array(
+-      'label' => '',
+-      'alter' => array(
+-        'alter_text' => 0,
+-        'text' => '',
+-        'make_link' => 0,
+-        'path' => '',
+-        'link_class' => '',
+-        'alt' => '',
+-        'prefix' => '',
+-        'suffix' => '',
+-        'target' => '',
+-        'help' => '',
+-        'trim' => 0,
+-        'max_length' => '',
+-        'word_boundary' => 1,
+-        'ellipsis' => 1,
+-        'html' => 0,
+-        'strip_tags' => 0,
+-      ),
+-      'empty' => '',
+-      'hide_empty' => 0,
+-      'empty_zero' => 0,
+-      'link_to_node' => 1,
+-      'exclude' => 0,
+-      'id' => 'title',
+-      'table' => 'node',
+-      'field' => 'title',
+-      'relationship' => 'none',
+-    ),
+-  ));
+-  $handler->override_option('sorts', array(
+-    'created' => array(
+-      'order' => 'DESC',
+-      'granularity' => 'second',
+-      'id' => 'created',
+-      'table' => 'node',
+-      'field' => 'created',
+-      'relationship' => 'none',
+-    ),
+-  ));
+-  $handler->override_option('filters', array(
+-    'status' => array(
+-      'operator' => '=',
+-      'value' => '1',
+-      'group' => '0',
+-      'exposed' => FALSE,
+-      'expose' => array(
+-        'operator' => FALSE,
+-        'label' => '',
+-      ),
+-      'id' => 'status',
+-      'table' => 'node',
+-      'field' => 'status',
+-      'relationship' => 'none',
+-    ),
+-    'type' => array(
+-      'operator' => 'in',
+-      'value' => array(
+-        'image' => 'image',
+-      ),
+-      'group' => '0',
+-      'exposed' => FALSE,
+-      'expose' => array(
+-        'operator' => FALSE,
+-        'label' => '',
+-      ),
+-      'id' => 'type',
+-      'table' => 'node',
+-      'field' => 'type',
+-      'relationship' => 'none',
+-    ),
+-  ));
+-  $handler->override_option('access', array(
+-    'type' => 'none',
+-  ));
+-  $handler->override_option('cache', array(
+-    'type' => 'none',
+-  ));
+-  $handler->override_option('title', 'Images');
+-  $handler->override_option('items_per_page', 15);
+-  $handler->override_option('use_pager', 'mini');
+-  $handler->override_option('use_more', 0);
+-  $handler->override_option('use_more_always', 0);
+-  $handler->override_option('use_more_text', 'View all images');
+-  $handler->override_option('style_plugin', 'grid');
+-  $handler->override_option('style_options', array(
+-    'grouping' => '',
+-    'columns' => '3',
+-    'alignment' => 'horizontal',
+-    'fill_single_line' => 1,
+-  ));
++  $handler->display->display_options['title'] = 'Images';
++  $handler->display->display_options['use_more_text'] = 'View all images';
++  $handler->display->display_options['access']['type'] = 'none';
++  $handler->display->display_options['cache']['type'] = 'none';
++  $handler->display->display_options['exposed_form']['type'] = 'basic';
++  $handler->display->display_options['pager']['type'] = 'mini';
++  $handler->display->display_options['pager']['options']['items_per_page'] = 15;
++  $handler->display->display_options['style_plugin'] = 'grid';
++  $handler->display->display_options['style_options']['columns'] = '3';
++  $handler->display->display_options['row_plugin'] = 'fields';
++  /* Field: Content: Image (field_image) */
++  $handler->display->display_options['fields']['field_image_fid']['id'] = 'field_image_fid';
++  $handler->display->display_options['fields']['field_image_fid']['table'] = 'node_data_field_image';
++  $handler->display->display_options['fields']['field_image_fid']['field'] = 'field_image_fid';
++  $handler->display->display_options['fields']['field_image_fid']['alter']['alter_text'] = 0;
++  $handler->display->display_options['fields']['field_image_fid']['alter']['make_link'] = 0;
++  $handler->display->display_options['fields']['field_image_fid']['alter']['trim'] = 0;
++  $handler->display->display_options['fields']['field_image_fid']['alter']['word_boundary'] = 1;
++  $handler->display->display_options['fields']['field_image_fid']['alter']['ellipsis'] = 1;
++  $handler->display->display_options['fields']['field_image_fid']['alter']['strip_tags'] = 0;
++  $handler->display->display_options['fields']['field_image_fid']['alter']['html'] = 0;
++  $handler->display->display_options['fields']['field_image_fid']['hide_empty'] = 0;
++  $handler->display->display_options['fields']['field_image_fid']['empty_zero'] = 0;
++  $handler->display->display_options['fields']['field_image_fid']['link_to_node'] = 0;
++  $handler->display->display_options['fields']['field_image_fid']['label_type'] = 'none';
++  $handler->display->display_options['fields']['field_image_fid']['format'] = 'medium_linked';
++  /* Field: Node: Title */
++  $handler->display->display_options['fields']['title']['id'] = 'title';
++  $handler->display->display_options['fields']['title']['table'] = 'node';
++  $handler->display->display_options['fields']['title']['field'] = 'title';
++  $handler->display->display_options['fields']['title']['label'] = '';
++  $handler->display->display_options['fields']['title']['alter']['alter_text'] = 0;
++  $handler->display->display_options['fields']['title']['alter']['make_link'] = 0;
++  $handler->display->display_options['fields']['title']['alter']['trim'] = 0;
++  $handler->display->display_options['fields']['title']['alter']['word_boundary'] = 1;
++  $handler->display->display_options['fields']['title']['alter']['ellipsis'] = 1;
++  $handler->display->display_options['fields']['title']['alter']['strip_tags'] = 0;
++  $handler->display->display_options['fields']['title']['alter']['html'] = 0;
++  $handler->display->display_options['fields']['title']['hide_empty'] = 0;
++  $handler->display->display_options['fields']['title']['empty_zero'] = 0;
++  $handler->display->display_options['fields']['title']['link_to_node'] = 1;
++  /* Sort criterion: Node: Post date */
++  $handler->display->display_options['sorts']['created']['id'] = 'created';
++  $handler->display->display_options['sorts']['created']['table'] = 'node';
++  $handler->display->display_options['sorts']['created']['field'] = 'created';
++  $handler->display->display_options['sorts']['created']['order'] = 'DESC';
++  /* Filter: Node: Published */
++  $handler->display->display_options['filters']['status']['id'] = 'status';
++  $handler->display->display_options['filters']['status']['table'] = 'node';
++  $handler->display->display_options['filters']['status']['field'] = 'status';
++  $handler->display->display_options['filters']['status']['value'] = '1';
++  $handler->display->display_options['filters']['status']['expose']['operator'] = FALSE;
++  /* Filter: Node: Type */
++  $handler->display->display_options['filters']['type']['id'] = 'type';
++  $handler->display->display_options['filters']['type']['table'] = 'node';
++  $handler->display->display_options['filters']['type']['field'] = 'type';
++  $handler->display->display_options['filters']['type']['value'] = array(
++    'image' => 'image',
++  );
++  $handler->display->display_options['filters']['type']['expose']['operator'] = FALSE;
++  
++/* Display: Block */
+   $handler = $view->new_display('block', 'Block', 'block_1');
+-  $handler->override_option('fields', array(
+-    'field_image_fid' => array(
+-      'label' => '',
+-      'alter' => array(
+-        'alter_text' => 0,
+-        'text' => '',
+-        'make_link' => 0,
+-        'path' => '',
+-        'link_class' => '',
+-        'alt' => '',
+-        'prefix' => '',
+-        'suffix' => '',
+-        'target' => '',
+-        'help' => '',
+-        'trim' => 0,
+-        'max_length' => '',
+-        'word_boundary' => 1,
+-        'ellipsis' => 1,
+-        'html' => 0,
+-        'strip_tags' => 0,
+-      ),
+-      'empty' => '',
+-      'hide_empty' => 0,
+-      'empty_zero' => 0,
+-      'link_to_node' => 0,
+-      'label_type' => 'none',
+-      'format' => 'thumbnail_linked',
+-      'multiple' => array(
+-        'group' => TRUE,
+-        'multiple_number' => '',
+-        'multiple_from' => '',
+-        'multiple_reversed' => FALSE,
+-      ),
+-      'exclude' => 0,
+-      'id' => 'field_image_fid',
+-      'table' => 'node_data_field_image',
+-      'field' => 'field_image_fid',
+-      'override' => array(
+-        'button' => 'Use default',
+-      ),
+-      'relationship' => 'none',
+-    ),
+-  ));
+-  $handler->override_option('title', 'Recent images');
+-  $handler->override_option('items_per_page', 4);
+-  $handler->override_option('use_pager', FALSE);
+-  $handler->override_option('use_more', 1);
+-  $handler->override_option('style_plugin', 'default');
+-  $handler->override_option('style_options', array());
+-  $handler->override_option('block_description', 'Recent images');
+-  $handler->override_option('block_caching', -1);
++  $handler->display->display_options['defaults']['title'] = FALSE;
++  $handler->display->display_options['title'] = 'Recent images';
++  $handler->display->display_options['defaults']['items_per_page'] = FALSE;
++  $handler->display->display_options['defaults']['use_more'] = FALSE;
++  $handler->display->display_options['use_more'] = TRUE;
++  $handler->display->display_options['use_more_text'] = 'View all images';
++  $handler->display->display_options['defaults']['style_plugin'] = FALSE;
++  $handler->display->display_options['style_plugin'] = 'default';
++  $handler->display->display_options['defaults']['style_options'] = FALSE;
++  $handler->display->display_options['defaults']['row_plugin'] = FALSE;
++  $handler->display->display_options['row_plugin'] = 'fields';
++  $handler->display->display_options['defaults']['row_options'] = FALSE;
++  $handler->display->display_options['defaults']['fields'] = FALSE;
++  /* Field: Content: Image (field_image) */
++  $handler->display->display_options['fields']['field_image_fid']['id'] = 'field_image_fid';
++  $handler->display->display_options['fields']['field_image_fid']['table'] = 'node_data_field_image';
++  $handler->display->display_options['fields']['field_image_fid']['field'] = 'field_image_fid';
++  $handler->display->display_options['fields']['field_image_fid']['alter']['alter_text'] = 0;
++  $handler->display->display_options['fields']['field_image_fid']['alter']['make_link'] = 0;
++  $handler->display->display_options['fields']['field_image_fid']['alter']['trim'] = 0;
++  $handler->display->display_options['fields']['field_image_fid']['alter']['word_boundary'] = 1;
++  $handler->display->display_options['fields']['field_image_fid']['alter']['ellipsis'] = 1;
++  $handler->display->display_options['fields']['field_image_fid']['alter']['strip_tags'] = 0;
++  $handler->display->display_options['fields']['field_image_fid']['alter']['html'] = 0;
++  $handler->display->display_options['fields']['field_image_fid']['hide_empty'] = 0;
++  $handler->display->display_options['fields']['field_image_fid']['empty_zero'] = 0;
++  $handler->display->display_options['fields']['field_image_fid']['link_to_node'] = 0;
++  $handler->display->display_options['fields']['field_image_fid']['label_type'] = 'none';
++  $handler->display->display_options['fields']['field_image_fid']['format'] = 'thumbnail_linked';
++  $handler->display->display_options['block_description'] = 'Recent images';
++  
++/* Display: Page */
+   $handler = $view->new_display('page', 'Page', 'page_1');
+-  $handler->override_option('path', 'image');
+-  $handler->override_option('menu', array(
+-    'type' => 'normal',
+-    'title' => 'Images',
+-    'description' => 'View a listing of image files available for viewing.',
+-    'weight' => '0',
+-    'name' => 'secondary-links',
+-  ));
+-  $handler->override_option('tab_options', array(
+-    'type' => 'none',
+-    'title' => '',
+-    'description' => '',
+-    'weight' => 0,
+-    'name' => 'navigation',
+-  ));
++  $handler->display->display_options['path'] = 'image';
++  $handler->display->display_options['menu']['type'] = 'normal';
++  $handler->display->display_options['menu']['title'] = 'Images';
++  $handler->display->display_options['menu']['description'] = 'View a listing of image files available for viewing.';
++  $handler->display->display_options['menu']['weight'] = '0';
++  $handler->display->display_options['menu']['name'] = 'secondary-links';
++  
++/* Display: Feed */
+   $handler = $view->new_display('feed', 'Feed', 'feed_1');
+-  $handler->override_option('style_plugin', 'rss');
+-  $handler->override_option('style_options', array(
+-    'mission_description' => FALSE,
+-    'description' => '',
+-  ));
+-  $handler->override_option('row_plugin', 'node_rss');
+-  $handler->override_option('path', 'image.rss');
+-  $handler->override_option('menu', array(
+-    'type' => 'none',
+-    'title' => '',
+-    'description' => '',
+-    'weight' => 0,
+-    'name' => 'navigation',
+-  ));
+-  $handler->override_option('tab_options', array(
+-    'type' => 'none',
+-    'title' => '',
+-    'description' => '',
+-    'weight' => 0,
+-    'name' => 'navigation',
+-  ));
+-  $handler->override_option('displays', array(
++  $handler->display->display_options['style_plugin'] = 'rss';
++  $handler->display->display_options['style_options']['mission_description'] = FALSE;
++  $handler->display->display_options['row_plugin'] = 'node_rss';
++  $handler->display->display_options['path'] = 'image.rss';
++  $handler->display->display_options['displays'] = array(
+     'block_1' => 'block_1',
+     'page_1' => 'page_1',
+     'default' => 0,
+-  ));
+-  $handler->override_option('sitename_title', FALSE);
++  );
+ 
+   $views[$view->name] = $view;
+ 
+-- 
+1.7.3.1
+

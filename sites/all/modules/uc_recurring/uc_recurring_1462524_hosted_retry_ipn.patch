@@ -1,0 +1,143 @@
+diff --git a/modules/uc_recurring_hosted/uc_recurring_hosted.module b/modules/uc_recurring_hosted/uc_recurring_hosted.module
+index b73b77b..42b49ec 100644
+--- a/modules/uc_recurring_hosted/uc_recurring_hosted.module
++++ b/modules/uc_recurring_hosted/uc_recurring_hosted.module
+@@ -45,8 +45,16 @@ function uc_recurring_hosted_menu() {
+       'type' => MENU_CALLBACK,
+       'file' => 'uc_recurring_hosted.paypal_ipn.inc'
+     );
+-  }
+ 
++    $items['admin/store/orders/retry-recurring-ipn'] = array(
++      'title' => 'Retry recurring IPN',
++      'page callback' => 'uc_recurring_hosted_paypal_retry_recurring_ipn',
++      'access arguments' => array('administer store'),
++      'type' => MENU_NORMAL_ITEM,
++      'file' => 'uc_recurring_hosted.paypal_ipn.inc',
++      'weight' => 5,
++    );
++  }
+   return $items;
+ }
+ 
+diff --git a/modules/uc_recurring_hosted/uc_recurring_hosted.paypal_ipn.inc b/modules/uc_recurring_hosted/uc_recurring_hosted.paypal_ipn.inc
+index 8311f0e..4cd9427 100644
+--- a/modules/uc_recurring_hosted/uc_recurring_hosted.paypal_ipn.inc
++++ b/modules/uc_recurring_hosted/uc_recurring_hosted.paypal_ipn.inc
+@@ -284,3 +284,116 @@ function _uc_recurring_hosted_paypal_ipn_is_duplicate($ipn) {
+ function _uc_recurring_hosted_paypal_ipn_save($ipn) {
+   drupal_write_record('uc_payment_paypal_ipn', $ipn);
+ }
++
++function uc_recurring_hosted_paypal_retry_recurring_ipn() {
++  return drupal_get_form('uc_recurring_hosted_paypal_retry_recurring_ipn_form');
++}
++
++function uc_recurring_hosted_paypal_retry_recurring_ipn_form(&$form_state) {
++  $form['no_production'] = array(
++    '#prefix' => t('<h3>WARNING!</h3>'),
++    '#value' => t('<strong><p>DO NOT USE THIS PAGE ON A LIVE SITE.</p>
++      <p>ONLY USE
++      IT ON A DEVELOPMENT COPY OF YOUR LIVE SITE.</p>
++      <p>DATA LOSS AND ALTERATION
++      CAN OCCUR IF YOU CHECK THE <em>Delete matching database entries</em>
++      BOX.</p>
++      <p>THIS IS NORMALLY FINE ON DEVELOPMENT SITES BUT IS NORMALLY
++      <em>NOT</em> SO ON PRODUCTION SITES.</p></strong>
++      <p>So please, play safely.</p>'),
++  );
++  $form['debug_ipn'] = array(
++    '#type' => 'textarea',
++    '#rows' => 25,
++    '#title' => t('Paste debug IPN'),
++    '#description' => t("Paste the debug output from the IPN you want to retry. Only paste the lines inside of the
++      array parentheses. They are in this format:<br />
++      <pre>[field] => Value</pre><br />
++      Don't worry about whitespace."),
++  );
++  $form['delete_existing'] = array(
++    '#type' => 'checkbox',
++    '#title' => t('Delete matching database entries'),
++    '#description' => t("If you are retrying a recurring payment
++      that was not applied to an order but <em>was</em> captured,
++      check this box. Otherwise, there won't be much point to using
++      this utility since the system will flag this as a duplicate IPN."),
++    '#default_value' => TRUE,
++  );
++  $form['submit'] = array(
++    '#type' => 'submit',
++    '#value' => t('Retry'),
++  );
++  return $form;
++}
++
++function uc_recurring_hosted_paypal_retry_recurring_ipn_form_validate($form, &$form_state) {
++  $debug_ipn = _uc_recurring_hosted_paypal_retry_recurring_ipn_parse($form_state['values']['debug_ipn']);
++  if ($debug_ipn === FALSE) {
++    form_set_error('debug_ipn', t("The debug IPN output you pasted was invalid. Please
++      make sure you have copied it correctly and try again."));
++  }
++  else {
++    $form_state['values']['debug_ipn_array'] = $debug_ipn;
++  }
++}
++
++function _uc_recurring_hosted_paypal_retry_recurring_ipn_parse($debug_ipn) {
++  $fail = TRUE;
++
++  // Convert all possible line endings into Linux-style line endings
++  $debug_ipn_1 = str_replace("\r\n", "\n", $debug_ipn); // Windows -> Linux
++  $debug_ipn_2 = str_replace("\r", "\n", $debug_ipn_1); // Mac -> Linux
++
++  $debug_ipn_array = array();
++
++  // Break the pasted code into lines
++  $debug_ipn_lines = explode("\n", $debug_ipn_2);
++  foreach ($debug_ipn_lines as $dil) {
++    $trimmed_dil = trim($dil);
++    if (empty($trimmed_dil)) {
++      continue; // Skip empty lines
++    }
++    $fail = FALSE;
++    $dil_parts = explode('=>', $dil); // Split it using the => character
++    // Build the field name and value without brackets
++    $dil_parts = str_replace(array('[', ']'), '', array(trim($dil_parts[0]), trim($dil_parts[1])));
++    $debug_ipn_array[$dil_parts[0]] = $dil_parts[1];
++  }
++
++  if ($fail) {
++    return FALSE;
++  }
++  return $debug_ipn_array;
++}
++
++function uc_recurring_hosted_paypal_retry_recurring_ipn_form_submit($form, &$form_state) {
++  $debug_ipn = $form_state['values']['debug_ipn_array'];
++
++  // This is ungodly awful, but we'll restore it at least.
++  // (We're doing this because uc_recurring_hosted_paypal_ipn() expects it.)
++  $old_post = $_POST;
++  $_POST = $debug_ipn;
++
++  // Figure out the order ID.
++  $order_id = _uc_recurring_hosted_paypal_ipn_order((object) $debug_ipn)->order_id;
++
++  // If the user requested deleting the existing IPN from the database, do so
++  // first. We'll check for duplicates the same way uc_recurring does.
++
++  if (_uc_recurring_hosted_paypal_ipn_is_duplicate((object) $debug_ipn)) {
++    db_query("DELETE FROM {uc_payment_paypal_ipn} WHERE txn_id = '%s' AND txn_type = '%s' AND status <> 'Pending'", $debug_ipn['txn_id'], $debug_ipn['txn_type']);
++    drupal_set_message(t('Deleted any IPNs that matched the transaction ID prior to retrying.'));
++  }
++
++  // Let it figure out order ID from the IPN
++
++  // Also, what's really awesome is that the IPN will still validate
++  // since it's based on a real, previous IPN that PayPal DID send.
++  uc_recurring_hosted_paypal_ipn($order_id);
++
++  $_POST = $old_post; // Don't scare FAPI.
++
++  drupal_set_message(t('The recurring IPN has been processed again.'));
++}
++

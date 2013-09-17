@@ -1,0 +1,63 @@
+<?php
+
+/**
+ * Implementation of hook_help().
+ *
+ * Call hook_helpinjector_help() to allow helpinject-created modules to
+ * add their help.
+ */
+function helpinjector_help($path, $arg) {
+  $help = module_invoke_all('helpinjector_help', $path, $arg);
+  return implode('', $help);
+}
+
+/**
+ * Implementation of hook_form_alter().
+ */
+function helpinjector_form_alter(&$form, $form_state, $form_id) {
+  helpinjector_step_form($form, $form_id, 'helpinjector_help_link');
+  $form['#description'] = isset($form['#description']) ? helpinjector_get_from_key('form', $form_id) . ' ' . $form['#description'] : helpinjector_get_from_key('form', $form_id);
+}
+
+/**
+ * Step through a form invoking a callback on all children.
+ */
+function helpinjector_step_form(&$element, $form_id, $callback) {
+  foreach (element_children($element) as $child) {
+    helpinjector_step_form($element[$child], $form_id . ':' . $child, $callback);
+  }
+  $callback($element, $form_id);
+}
+
+/**
+ * Add an advanced help topic link to a designated element.
+ */
+function helpinjector_help_link(&$element, $form_id) {
+  if (isset($element['#type']) && !in_array($element['#type'], array('button', 'image_button', 'submit', 'markup', 'token', 'hidden', 'form', 'value', 'weight'))) {
+    if ($result = helpinjector_get_from_key($form_id)) {
+      $link = theme('advanced_help_topic', $result['module'], $result['file']);
+      if ($element['#type'] == 'fieldset') {
+        drupal_add_css(drupal_get_path('module', 'helpinjector') . '/helpinjector.css');
+        $link = preg_replace('/class="(.+?)"/', 'class="\1 helpinjector-nofloat"', $link);
+      }
+      $element['#description'] = isset($element['#description']) ? $link . ' ' . $element['#description'] : $link;
+    }
+  }
+}
+
+/**
+ * Get help keys from all modules implementing hook_helpinjector_keys().
+ *
+ * Modules attempting to place icons on the same form element will overwrite each other,
+ * but that's probably okay--we don't want multiple help icons appearing anyway.
+ */
+function helpinjector_get_from_key($key) {
+  static $helpkeys;
+
+  if (empty($helpkeys)) {
+    $helpkeys = module_invoke_all('helpinjector_keys');
+  }
+  
+  return isset($helpkeys[$key]) ? $helpkeys[$key] : FALSE;
+}
+

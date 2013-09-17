@@ -1,0 +1,21 @@
+core = "6.x"
+debutf = "1.0-draft"
+dependencies[] = "advanced_help"
+dependencies[] = "features"
+dependencies[] = "pathauto"
+description = "Core components for the Debut features set."
+features[user_permission][] = "view advanced help index"
+features[user_permission][] = "view advanced help popup"
+features[user_permission][] = "view advanced help topic"
+features[user_role][] = "contributor"
+features[user_role][] = "editor"
+kitf = "1.0-draft"
+name = "Debut"
+package = "Features"
+
+; Information added by drupal.org packaging script on 2011-02-28
+version = "6.x-1.x-dev"
+core = "6.x"
+project = "debut"
+datestamp = "1298851475"
+

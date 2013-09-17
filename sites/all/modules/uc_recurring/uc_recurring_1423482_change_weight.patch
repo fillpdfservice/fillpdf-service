@@ -1,0 +1,18 @@
+diff --git a/sites/all/modules/uc_recurring/uc_recurring.install b/sites/all/modules/uc_recurring/uc_recurring.install
+index 4d1c66d..61e6dd5 100644
+--- a/sites/all/modules/uc_recurring/uc_recurring.install
++++ b/sites/all/modules/uc_recurring/uc_recurring.install
+@@ -541,3 +541,13 @@ function uc_recurring_update_6012() {
+   }
+   return $ret;
+ }
++
++/**
++ * Weight the module higher than uc_order so that
++ * uc_recurring_uc_checkout_complete() operates with the correct context.
++ */
++function uc_recurring_update_6013() {
++  $ret = update_sql("UPDATE {system} SET weight = -1 WHERE name = 'uc_recurring'");
++  return $ret;
++}
++

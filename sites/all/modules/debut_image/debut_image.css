@@ -1,0 +1,9 @@
+.field-field-image img {
+  border: 1px solid #C0C0C0;
+}
+
+.field-field-image img.imagecache-medium {
+  float: right;
+  margin-left: 15px;
+  margin-bottom: 15px;
+}

@@ -1,0 +1,26 @@
+
+name = awesome
+description = This is an awesome theme
+version = 6.x.1
+core = 6.x
+engine = phptemplate
+
+stylesheets[all][] = style.css
+stylesheets[print][] = print.css
+
+regions[superfish] = Superfish Menu
+regions[slider] = Slider
+regions[left] = Left sidebar
+regions[right] = Right sidebar
+regions[section_top] = Section top
+regions[content_bottom] = Content bottom
+regions[bottomleft] = Bottom Right
+regions[bottomright] = Bottom Left
+regions[bottom] = Bottom
+regions[footer] = Footer
+; Information added by drupal.org packaging script on 2009-06-08
+version = "6.x-1.13"
+core = "6.x"
+project = "awesome"
+datestamp = "1244470210"
+

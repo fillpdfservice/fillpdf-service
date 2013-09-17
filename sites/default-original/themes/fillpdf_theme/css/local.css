@@ -1,0 +1,63 @@
+/* $Id: local-sample.css,v 1.1 2009/08/19 04:28:52 sociotech Exp $ */
+
+/****************************/
+/* LOCAL CSS                */
+/****************************/
+
+/* Put your custom CSS and CSS overrides in this file and  */
+/* rename it local.css.  By restricting your CSS changes   */
+/* to local.css, your changes will not be overwritten when */
+/* upgrading to a new version of this theme.  You can also */
+/* use a local-rtl.css file for the equivalent in RTL.     */
+
+/* Steps to activate local.css:                       */
+/* 1. Add your custom CSS to this file                */
+/* 2. Rename this file to local.css                   */
+/* 3. Clear cached data at admin/settings/performance */
+
+#view-id-product_listing-page_1 td{
+  background-color:#383838;
+  border:1px solid gray;
+  color:white;
+  vertical-align:top;
+  width:32%;
+}
+
+#view-id-product_listing-page_1 .teaser{
+  border-bottom:none;
+}
+
+#product-details h2, #product-details #price-group{
+  width:141px;
+  margin:0px auto;
+}
+
+#product-details h2{
+    margin:0px auto 10px auto;
+}
+
+.product-group #price-group{
+  float:none;
+}
+
+body.page-node .product-group #price-group{
+  float:right;
+}
+
+#edit-items-0-qty{
+  display:none;
+}
+
+#view-id-blog-page_1 .views-row.views-row-first {
+  margin-top: auto;
+}
+
+#view-id-blog-page_1 .views-row {
+  margin-top: 25px;
+}
+
+#site-name-slogan {
+  margin-top: 19px;
+  margin-left: 10px;
+  font-weight: bold;
+}

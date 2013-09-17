@@ -1,0 +1,141 @@
+<?php
+// $Id$
+
+/**
+ * Implementation of hook_install().
+ */
+function fillpdf_support_install() {
+  drupal_install_schema('fillpdf_support');
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function fillpdf_support_uninstall() {
+  drupal_uninstall_schema('fillpdf_support');
+}
+
+/**
+ * Implementation of hook_schema().
+ */
+function fillpdf_support_schema() {
+  $schema = array();
+
+  $schema['fillpdf_support'] = array(
+    'fields' => array(
+      'uid' => array(
+        'type' => 'int',
+        'size' => 'small',
+        'not null' => TRUE,
+      ),
+      'api_key' => array(
+        'type' => 'varchar',
+        'length' => '127',
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'count' => array(
+        'type' => 'int',
+        'length' => 'small',
+        'not null' => TRUE,
+      ),
+      'max' => array(
+        'type' => 'int',
+        'length' => 'small',
+        'not null' => TRUE,
+      ),
+    ),
+    'primary key' => array('uid', 'api_key'),
+  );
+
+  // This is totally the raw data. I can aggregate it myself as needed. I might
+  // pre-aggregate it periodically once it matters.
+  $schema['fillpdf_support_usage'] = array(
+    'fields' => array(
+      'uid' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+      ),
+      'count' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+      ),
+      'timestamp' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+      ),
+    ),
+    'primary key' => array('uid', 'timestamp'),
+  );
+
+  return $schema;
+}
+
+/**
+ * Add the max field, used to cap merges
+ */
+function fillpdf_support_update_6100() {
+  $new_column = array(
+    'type' => 'int',
+    'length' => 'small',
+    'not null' => TRUE,
+  );
+  $ret = array();
+  db_add_field($ret, 'fillpdf_support', 'max', $new_column);
+  db_query('update {fillpdf_support} set max=15 where max=0');
+  db_query('update {fillpdf_support} set max=200 where uid in (4,46)');
+  return $ret;
+}
+
+/**
+ * Don't actually need the max column, will be set in
+ * $node->field_max_pdf_merges[0]['value'] for each product
+ */
+function fillpdf_support_update_6101() {
+  $ret = array();
+	$new_column = array(
+    'description' => 'The node revision of the product this user last
+      purchased (so they get to keep the price they originally paid if the price changes).',
+    'type' => 'int',
+    'unsigned' => TRUE,
+    'not null' => TRUE,
+    'default' => 1,
+  );
+  db_add_field($ret, 'fillpdf_support', 'vid', $new_column);
+  db_query('update {fillpdf_support} set vid=1 where max=15');
+  db_query('update {fillpdf_support} set vid=7 where max=200');
+  db_query('update {fillpdf_support} set vid=8 where max=0');
+
+  db_drop_field($ret, 'fillpdf_support', 'max');
+  return $ret;
+}
+
+/**
+ * Add grandfathered role to all existing subscribers.
+ */
+function fillpdf_support_update_6102() {
+  $grandfathered_rid = array_search('grandfathered', user_roles());
+  if (empty($grandfathered_rid)) {
+    $ret['#abort'] = array(
+      'success' => FALSE,
+      'query' => 'Please revert the feature containing the <em>grandfathered</em> role
+        before you run this update.'
+    );
+    return $ret;
+  }
+  $ret[] = update_sql("INSERT INTO {users_roles} (uid, rid) SELECT uid, $grandfathered_rid FROM {users}");
+  return $ret;
+}
+
+/**
+ * Add {fillpdf_usage} table.
+ */
+function fillpdf_support_update_6103() {
+  // TODO: Add {fillpdf_usage} table in this update. Get the unprocessed schema,
+  // etc. if I can.
+  $ret = array();
+  $fillpdf_support_usage = drupal_get_schema_unprocessed('fillpdf_support', 'fillpdf_support_usage');
+  db_create_table($ret, 'fillpdf_support_usage', $fillpdf_support_usage);
+  return $ret;
+}
+

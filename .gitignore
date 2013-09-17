@@ -1,0 +1,15 @@
+.htaccess
+*.sw[a-z]
+tags
+awstats-icon
+awstatsicons
+icon
+stats
+drushrc.php
+
+# Should be symlinked appropriately
+sites/default
+sites/*/settings.local.php
+sites/default-original/files/*
+sites/*/files/*
+sites/*/files-old/*

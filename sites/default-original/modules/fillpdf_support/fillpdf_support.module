@@ -1,0 +1,385 @@
+<?php
+function fillpdf_support_init() {
+  global $user;
+  if ($user->uid) {
+    if (in_array('FillPDF License', $user->roles) && in_array('grandfathered', $user->roles) === FALSE) {
+      if (arg(0) == 'cart') {
+        // Clear the cart and redirect to the user's page
+        uc_cart_empty(uc_cart_get_id());
+        drupal_set_message(t('Upgrades and downgrades are currently manual. Please <a href="!contact">contact support</a> to change plans.', array('!contact', url('contact'))), 'error');
+        drupal_goto('contact');
+      }
+    }
+  }
+}
+
+function fillpdf_support_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL){
+  if($node->type=='product' && $op=='view'){
+    // $node->content['display_price']['#value'] = str_replace('</span>', '/mo.</span>', $node->content['display_price']['#value']);
+    $node->content['display_price']['#value'] .= 'per month';
+    // $node->content['display_price']['#value'] .= 'one time fee';
+  }
+}
+
+function fillpdf_support_form_alter(&$form, &$form_state, $form_id){
+  //For the free product, let's bypass uc_free_order, too much of a hastle.
+  // Just give them an API key on signup.  Redirect them to /user
+  if ($form_id=='uc_product_add_to_cart_form_1'){
+  	$form['#submit'] = array('_fillpdf_support_goto_user');
+    return;
+  }
+  // Upgrades and downgrades are manual right now.
+  $form_part = 'uc_product_add_to_cart_form_';
+  if (substr($form_id, 0, strlen($form_part)) == $form_part) {
+    global $user;
+    if ($user->uid && in_array('FillPDF License', $user->roles) && in_array('grandfathered', $user->roles) === FALSE) {
+      $form['submit']['#type'] = 'markup';
+      $form['submit']['#attributes'] = array('title' => t('Contact support to switch'));
+      $form['submit']['#attributes']['alt'] = $form['submit']['attributes']['title'];
+      $form['submit']['#value'] = t('<a href="!contact">Contact support</a><br />
+          (Upgrades and downgrades are currently manual.)', array('!contact' => url('contact')));
+    }
+  }
+}
+
+function _fillpdf_support_goto_user(){
+	global $user;
+	if ($user->uid) {
+	  drupal_set_message("As a registered user, you already have the Free license; your API key is below..");
+	  drupal_goto('user');
+	}
+  else {
+	  drupal_set_message("After you register, the API key will appear on your account page.");
+	  drupal_goto('user/register');
+	}
+}
+
+
+function _fillpdf_support_get_license($api_key = NULL, $uid = NULL){
+  // get api key stuff
+  if ($api_key) {
+    $license = db_fetch_object(db_query('select * from {fillpdf_support} where api_key="%s"', $api_key));
+  }
+  elseif ($uid) {
+    $license = db_fetch_object(db_query('select * from {fillpdf_support} where uid=%d', $uid));
+  }
+  if (!$license) {
+    $license = new stdClass;
+    $license->status = 'authentication_error';
+    return $license;
+  }
+
+  // get the specific product the user purchased (vid, not nid).
+  // @todo: default vid to 1 in database
+  $purchased_product = node_load(array('type'=>'product'), $license->vid);
+  $license->max = $purchased_product->field_max_pdf_merges[0]['value'];
+  $license->title = $purchased_product->title;
+  $license->price = $purchased_product->sell_price;
+
+  // @todo: check role.  if enterprise, get enterprise.max. if premium, get premium.max.  since no vid is recorded, just go off current and decide to never reduce monthly maximum.
+  // ps, maybe not (see last function)
+
+  //get license status
+  $account = user_load(array('uid'=>$license->uid));
+  // if(has_role), check max<vid.max
+  if( in_array('FillPDF License', $account->roles) ){ // monthly subscriptions
+    if( ($license->count >= $license->max) && ($license->max!=0) )
+      $license->status = 'quota_error';
+    else
+      $license->status = 'valid';
+  }
+  // else, check max<free.vid.max
+  else{
+    $free_product = node_load(1);
+    $license->max = $free_product->field_max_pdf_merges[0]['value'];
+    if( ($license->count > $free_product->field_max_pdf_merges[0]['value']))
+      $license->status = 'quota_error';
+    else
+      $license->status = 'valid';
+  }
+
+  return $license;
+}
+
+function _fillpdf_support_create_license($uid){
+  $obj = new stdClass;
+  $obj->uid = $uid;
+  $obj->api_key = user_password(33);
+  $obj->count = 0;
+  $obj->vid = 1;
+  drupal_write_record('fillpdf_support', $obj);
+//  return _fillpdf_support_get_license($api_key);
+}
+
+/**
+ * Implementation of hook_user().
+ * Shows the users's license
+ */
+function fillpdf_support_user($op, &$edit, &$account, $category = NULL) {
+  global $user;
+  switch ($op) {
+    case 'insert':
+      _fillpdf_support_create_license($account->uid);
+      break;
+
+    case 'view':
+      if ($user->uid && ($user->uid == $account->uid || $user->uid == 1) ) {
+        $license = _fillpdf_support_get_license(null, $account->uid);
+//        if(!$license) // this should never happen
+//          $license = _fillpdf_support_create_license($account->uid);
+
+        $account->content['fillpdf_api_key'] = array(
+          '#type' => 'user_profile_category',
+          '#weight' => -5,
+          '#attributes' => array( 'class' => 'fillpdf-api-key' ),
+          '#title' => t('Fill PDF License'),
+          'api_key' => array(
+            '#weigth' => 0,
+            '#type' => 'user_profile_item',
+            '#title' => 'API Key',
+            '#value' => '<span style="color:white;background-color:green;padding:5px;">'.$license->api_key.'</span>',
+          ),
+        );
+
+        if($license->status=='valid'){
+          $max = ($license->max == 0)? 'Unlimited' : $license->max;
+          $usage = "<u>{$license->count} / {$max}</u> PDF used so far.";
+        }elseif($license->status=='quota_error'){
+          $usage = "Quota exceeded; <a href='/products'>please upgrade your account.</a>";
+        }elseif($license->status=='authentication_error'){
+          $usage = t('<div class="error">Authentication error -- this is a bug.  Please contact <a href="!support_url">support</a>.</div>', array('!support_url' => url('contact')));
+        }
+        $account->content['fillpdf_api_key']['usage'] = array(
+        '#weight' => 1,
+          '#type' => 'user_profile_item',
+          '#title' => 'Usage',
+          '#value' => $usage
+         );
+      }
+      break;
+  }
+}
+
+function fillpdf_support_cron(){
+  $timestamp = time();
+
+  // run once a month.  See if last cron run was this month
+  $last_run = db_result(db_query('select timestamp from {watchdog} where type="cron" order by timestamp desc limit 1'));
+
+  // Allow simulating a fake month to test archival.
+  $fake_month = variable_get('fillpdf_support_debug_archival_month', NULL);
+
+  if ($fake_month) {
+    $last_run = strtotime($fake_month);
+  }
+
+  if ( date('n', $last_run) != date('n', $timestamp) ) {
+    // Archiving is monthly for now, but it could be more often if I wanted.
+    // I can aggregate the period I need if I reduce the granularity.
+    fillpdf_support_archive($timestamp);
+    watchdog('fillpdf_support', "Archived service usage with timestamp $timestamp.");
+    db_query('update {fillpdf_support} set count=0');
+  }
+}
+
+function fillpdf_support_archive($timestamp) {
+  // Basically just go through all records in fillpdf_support and insert them
+  // into fillpdf_support_archive.
+  $fillpdf_support_query = "select * from {fillpdf_support}";
+  $fillpdf_support_records = db_query($fillpdf_support_query);
+
+  while ($fillpdf_support = db_fetch_object($fillpdf_support_records)) {
+    $fillpdf_usage = new stdClass();
+    $fillpdf_usage->uid = $fillpdf_support->uid;
+    $fillpdf_usage->count = $fillpdf_support->count;
+    $fillpdf_usage->timestamp = $timestamp;
+    drupal_write_record('fillpdf_support_usage', $fillpdf_usage);
+  }
+}
+
+function fillpdf_support_order($op, &$arg1, $arg2) {
+  if ($op == 'update' && $arg2 == 'completed') {
+    $uid = $arg1->uid;
+
+    // Pin them to the version of the product they ordered
+    // unless this is a recurring payment.
+    if (!($arg1->data['recurring_fee'] && $arg1->data['old_order_id'])) {
+      $node = node_load($arg1->products[0]->nid);
+      db_query('update {fillpdf_support} set vid=%d where uid=%d', $node->vid, $uid);
+    }
+    // Remove the grandfathered role if they have it.
+    $grandfathered_rid = array_search('grandfathered', user_roles());
+    db_query('DELETE FROM {users_roles} WHERE uid = %d and rid = %d', $uid, $grandfathered_rid);
+  }
+}
+
+
+////------- local xmlrpc
+function fillpdf_support_xmlrpc(){
+  return array(
+    array(
+      'parse_pdf',
+      'fillpdf_support_parse_as_xfdf',
+      array('array', 'string', 'string'), // param[0] needs to be return value
+      t('Authenticates fillpdf license, then re-routes to fillpdf servlet')
+    ),
+    array(
+      'parse_pdf_fields',
+      'fillpdf_support_parse_as_fields',
+      array('array', 'string'), // param[0] needs to be return value
+      t('Authenticates fillpdf license, then re-routes to fillpdf servlet')
+    ),
+    array(
+      'merge_pdf',
+      'fillpdf_support_merge_pdf',
+      array('array','string', 'array', 'string'),
+      t('Authenticates fillpdf license, then re-routes to fillpdf servlet')
+    ),
+    array(
+      'merge_pdf_enhanced',
+      'fillpdf_support_merge_pdf',
+      array('array','string', 'array', 'string', 'boolean'),
+      t('Authenticates fillpdf license, then re-routes to fillpdf servlet')
+    ),
+    array(
+      'merge_pdf_v3',
+      'fillpdf_support_merge_pdf',
+      array('array','string', 'array', 'string', 'boolean', 'array'),
+      t('Authenticates fillpdf license, then re-routes to fillpdf servlet')
+    ),
+  );
+}
+
+function fillpdf_support_parse_as_fields($content) {
+  // TODO: pdftk
+  $method = (variable_get('fillpdf_local_service', TRUE) ? 'local' : 'pdftk');
+  if ($method == 'local') {
+    try {
+      $fillpdf = _fillpdf_support_get_service($content);
+      $data = java_values($fillpdf->parse());
+    }
+    catch (JavaException $e){
+      watchdog('fillpdf_support', "Was unable to parse a user's PDF fields! Please troubleshoot! Error text: !e", array('!e' => java_truncate((string)($e))), WATCHDOG_ERROR);
+      return array('error' => java_truncate((string)$e));
+    }
+  }
+  else {
+    $data = fillpdf_execute_parse($method, base64_decode($content), 'stream');
+  }
+  return array('data' => $data );
+}
+
+// This is called from xml-rpc parse_pdf (the old way), want to phase this out
+function fillpdf_support_parse_as_xfdf($content, $api_key) {
+  // NOTE: don't validate parse, just merges
+  try {
+    $fillpdf = _fillpdf_support_get_service($content);
+    $data = base64_encode($fillpdf->parse_as_xfdf());
+  }
+  catch(JavaException $e) {
+    watchdog('fillpdf_support', "Was unable to parse a user's PDF fields as XFDF! Please troubleshoot! Error text: !e", array('!e' => java_truncate((string)($e))), WATCHDOG_ERROR);
+    return array('error' => java_truncate((string)$e));
+  }
+  return array('data' => $data);
+}
+
+function fillpdf_support_merge_pdf($pdf_data, $fields, $api_key, $flatten = TRUE, $image_data = array()) {
+  // If the API key is "pdf_forms", then manually load wizonesolutions's account
+  // provided that the $fields match hardcoded values that we allow.
+  //
+  // This is used by the PDF Forms API module tests, but we don't want to allow
+  // people to get unrestricted free usage of the service, and they should get
+  // an authentication error if they aren't passing the right values.
+
+  $pdf_forms_fields = array(
+    'form1[0].#subform[0].ImageField1[0]' => 'form1[0].#subform[0].ImageField1[0]',
+    'form1[0].#subform[0].Button1[0]' => 'form1[0].#subform[0].Button1[0]',
+    'form1[0].#subform[0].TextField1[0]' => 'form1[0].#subform[0].TextField1[0]',
+  );
+
+  if ($api_key == 'pdf_forms' && $fields == $pdf_forms_fields) {
+    // Chaining FTW.
+    watchdog('fillpdf_support', 'pdf_forms request matched.', array());
+    $api_key = _fillpdf_support_get_license(NULL, user_load(array('name' => 'wizonesolutions'))->uid)->api_key;
+  }
+  else {
+    $license = _fillpdf_support_validate_key($api_key);
+  }
+  if (isset ($license->error)) {
+    return $license->error;
+  }
+  $account = user_load($license->uid);
+  $method = (variable_get('fillpdf_local_service', TRUE) ? 'local' : 'pdftk');
+  if ($method == 'local') {
+    try {
+      $fillpdf = _fillpdf_support_get_service($pdf_data);
+      foreach($fields as $key=>$field){
+        if (substr($field, 0, 7) == '{image}') {
+          // If they are grandfathered or a free user, skip the image.
+          if (in_array('grandfathered', $account->roles) === FALSE &&
+            in_array('FillPDF License', $account->roles) === TRUE) {
+            // Retrieve the matching image from $image_data
+            $image_bytes = file_save_data(base64_decode($image_data[$key]['data']),
+              file_directory_temp() . '/' . $image_data[$key]['filenamehash'], FILE_EXISTS_RENAME);
+            $fillpdf->image($key, $image_bytes, "file");
+            file_delete($image_bytes);
+          }
+        }
+        else {
+          $fillpdf->text($key, $field);
+        }
+      }
+    }
+    catch (JavaException $e) {
+      watchdog('fillpdf_support', "Was unable to merge a user's PDF data! Please troubleshoot! Error text: !e", array('!e' => java_truncate((string)($e))), WATCHDOG_ERROR);
+      file_delete($image_bytes);
+      return array('error' => java_truncate((string)$e));
+    }
+    try {
+      if ($flatten) {
+        $byte_array = java_values($fillpdf->toByteArray());
+      }
+      else {
+        $byte_array = java_values($fillpdf->toByteArrayUnflattened());
+      }
+    }
+    catch (JavaException $e) {
+      drupal_set_message(java_truncate((string)$e), 'error');
+      drupal_goto(); //after setting error message
+    }
+  }
+  else {
+    $byte_array = base64_encode(fillpdf_execute_merge($method, $fields, base64_decode($pdf_data), 'stream', $flatten));
+  }
+  $license->count++;
+  db_query('update {fillpdf_support} set count=%d where api_key="%s"', $license->count, $license->api_key);
+  return array('data' => $byte_array);
+}
+
+/**
+ * gets the FillpdfService instance
+ * @param byte[] $bytes PDF data as bytes
+ */
+function _fillpdf_support_get_service($bytes) {
+  $require = drupal_get_path('module', 'fillpdf').'/lib/JavaBridge/java/Java.inc';
+  require_once($require);
+  $fillpdf = new java('com.ocdevel.FillpdfService', $bytes, 'bytes');
+  return $fillpdf;
+}
+
+
+/**
+ * Validates the API Key
+ */
+function _fillpdf_support_validate_key($api_key) {
+  $license = _fillpdf_support_get_license($api_key);
+  if ($license->status == 'authentication_error') {
+    $license->error = array('error' => 'Authentication error. To use Fill PDF Service, you must <a href="https://fillpdf-service.com">register for a key</a>.');
+  }
+  elseif ($license->status == 'quota_error') {
+    $license->error = array('error' => 'Quota error: The site license has exceeded its Fill PDF Service quota for the month. Please contact your administrator to <a href="http://fillpdf-service.com/products">upgrade the account.</a>');
+  }
+  return $license;
+}
+
+//TODO: intercept validators, make sure they don't use existing email on account creation 

@@ -1,0 +1,20 @@
+name = VAT Number
+description = Ask for and validate customer's VAT number.
+dependencies[] = uc_cart
+dependencies[] = soapclient
+package = Ubercart - extra
+core = 6.x
+
+; Information added by drupal.org packaging script on 2010-11-12
+version = "6.x-1.x-dev"
+core = "6.x"
+project = "uc_vat_number"
+datestamp = "1289564711"
+
+
+; Information added by drupal.org packaging script on 2012-04-19
+version = "6.x-3.x-dev"
+core = "6.x"
+project = "uc_vat_number"
+datestamp = "1334839578"
+

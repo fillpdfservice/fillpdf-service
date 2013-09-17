@@ -1,0 +1,463 @@
+From 1569f4208bdf543cc57084043c1ec0dca7b93d80 Mon Sep 17 00:00:00 2001
+From: WizOne Solutions <wizonesolutions@739934.no-reply.drupal.org>
+Date: Fri, 11 Mar 2011 01:15:37 -0800
+Subject: [PATCH] Issue #1088796 by wizonesolutions: Make compatible with Views 6.x-3.0-alpha3.
+
+---
+ .../all/modules/debut_blog/debut_blog.features.inc |    2 +-
+ sites/all/modules/debut_blog/debut_blog.info       |   11 +-
+ .../debut_blog/debut_blog.views_default.inc        |  386 ++++++--------------
+ 3 files changed, 124 insertions(+), 275 deletions(-)
+
+diff --git a/sites/all/modules/debut_blog/debut_blog.features.inc b/sites/all/modules/debut_blog/debut_blog.features.inc
+index 4698fb5..bafcf6e 100644
+--- a/sites/all/modules/debut_blog/debut_blog.features.inc
++++ b/sites/all/modules/debut_blog/debut_blog.features.inc
+@@ -38,6 +38,6 @@ function debut_blog_node_info() {
+  */
+ function debut_blog_views_api() {
+   return array(
+-    'api' => '2',
++    'api' => '3.0-alpha1',
+   );
+ }
+diff --git a/sites/all/modules/debut_blog/debut_blog.info b/sites/all/modules/debut_blog/debut_blog.info
+index 353d7a2..6a6beb6 100644
+--- a/sites/all/modules/debut_blog/debut_blog.info
++++ b/sites/all/modules/debut_blog/debut_blog.info
+@@ -1,4 +1,5 @@
+ core = "6.x"
++datestamp = "1298619096"
+ debutf = "1.0-draft"
+ dependencies[] = "context"
+ dependencies[] = "features"
+@@ -27,15 +28,9 @@ features[variable][] = "comment_subject_field_blog"
+ features[variable][] = "node_options_blog"
+ features[variable][] = "pathauto_node_blog_pattern"
+ features[views][] = "blog"
+-features[views_api][] = "api:2"
++features[views_api][] = "api:3.0-alpha1"
+ kitf = "1.0-draft"
+ name = "Debut Blog"
+ package = "Features"
+ project = "debut_blog"
+-
+-; Information added by drupal.org packaging script on 2011-02-25
+-version = "6.x-1.x-dev"
+-core = "6.x"
+-project = "debut_blog"
+-datestamp = "1298619096"
+-
++version = "6.x-2.0-beta1"
+diff --git a/sites/all/modules/debut_blog/debut_blog.views_default.inc b/sites/all/modules/debut_blog/debut_blog.views_default.inc
+index 963af84..42d8219 100644
+--- a/sites/all/modules/debut_blog/debut_blog.views_default.inc
++++ b/sites/all/modules/debut_blog/debut_blog.views_default.inc
+@@ -14,284 +14,138 @@ function debut_blog_views_default_views() {
+   $view->view_php = '';
+   $view->base_table = 'node';
+   $view->is_cacheable = FALSE;
+-  $view->api_version = 2;
++  $view->api_version = 3.0-alpha1;
+   $view->disabled = FALSE; /* Edit this to true to make a default view disabled initially */
++  
++/* Display: Defaults */
+   $handler = $view->new_display('default', 'Defaults', 'default');
+-  $handler->override_option('fields', array(
+-    'title' => array(
+-      'label' => '',
+-      'alter' => array(
+-        'alter_text' => 0,
+-        'text' => '',
+-        'make_link' => 0,
+-        'path' => '',
+-        'link_class' => '',
+-        'alt' => '',
+-        'prefix' => '',
+-        'suffix' => '',
+-        'target' => '',
+-        'help' => '',
+-        'trim' => 0,
+-        'max_length' => '',
+-        'word_boundary' => 1,
+-        'ellipsis' => 1,
+-        'html' => 0,
+-        'strip_tags' => 0,
+-      ),
+-      'empty' => '',
+-      'hide_empty' => 0,
+-      'empty_zero' => 0,
+-      'link_to_node' => 1,
+-      'exclude' => 0,
+-      'id' => 'title',
+-      'table' => 'node',
+-      'field' => 'title',
+-      'relationship' => 'none',
+-    ),
+-  ));
+-  $handler->override_option('sorts', array(
+-    'created' => array(
+-      'order' => 'DESC',
+-      'granularity' => 'second',
+-      'id' => 'created',
+-      'table' => 'node',
+-      'field' => 'created',
+-      'relationship' => 'none',
+-    ),
+-  ));
+-  $handler->override_option('arguments', array(
+-    'nid' => array(
+-      'id' => 'nid',
+-      'table' => 'node',
+-      'field' => 'nid',
+-    ),
+-  ));
+-  $handler->override_option('filters', array(
+-    'status' => array(
+-      'operator' => '=',
+-      'value' => '1',
+-      'group' => '0',
+-      'exposed' => FALSE,
+-      'expose' => array(
+-        'operator' => FALSE,
+-        'label' => '',
+-      ),
+-      'id' => 'status',
+-      'table' => 'node',
+-      'field' => 'status',
+-      'relationship' => 'none',
+-    ),
+-    'type' => array(
+-      'operator' => 'in',
+-      'value' => array(
+-        'blog' => 'blog',
+-      ),
+-      'group' => '0',
+-      'exposed' => FALSE,
+-      'expose' => array(
+-        'operator' => FALSE,
+-        'label' => '',
+-      ),
+-      'id' => 'type',
+-      'table' => 'node',
+-      'field' => 'type',
+-      'relationship' => 'none',
+-    ),
+-  ));
+-  $handler->override_option('access', array(
+-    'type' => 'none',
+-  ));
+-  $handler->override_option('cache', array(
+-    'type' => 'none',
+-  ));
+-  $handler->override_option('title', 'Blog posts');
+-  $handler->override_option('items_per_page', 25);
+-  $handler->override_option('use_pager', 'mini');
+-  $handler->override_option('style_options', array(
+-    'grouping' => '',
+-  ));
++  $handler->display->display_options['title'] = 'Blog posts';
++  $handler->display->display_options['access']['type'] = 'none';
++  $handler->display->display_options['cache']['type'] = 'none';
++  $handler->display->display_options['exposed_form']['type'] = 'basic';
++  $handler->display->display_options['pager']['type'] = 'mini';
++  $handler->display->display_options['pager']['options']['items_per_page'] = 25;
++  $handler->display->display_options['style_plugin'] = 'default';
++  $handler->display->display_options['row_plugin'] = 'fields';
++  /* Field: Node: Title */
++  $handler->display->display_options['fields']['title']['id'] = 'title';
++  $handler->display->display_options['fields']['title']['table'] = 'node';
++  $handler->display->display_options['fields']['title']['field'] = 'title';
++  $handler->display->display_options['fields']['title']['label'] = '';
++  $handler->display->display_options['fields']['title']['alter']['alter_text'] = 0;
++  $handler->display->display_options['fields']['title']['alter']['make_link'] = 0;
++  $handler->display->display_options['fields']['title']['alter']['trim'] = 0;
++  $handler->display->display_options['fields']['title']['alter']['word_boundary'] = 1;
++  $handler->display->display_options['fields']['title']['alter']['ellipsis'] = 1;
++  $handler->display->display_options['fields']['title']['alter']['strip_tags'] = 0;
++  $handler->display->display_options['fields']['title']['alter']['html'] = 0;
++  $handler->display->display_options['fields']['title']['hide_empty'] = 0;
++  $handler->display->display_options['fields']['title']['empty_zero'] = 0;
++  $handler->display->display_options['fields']['title']['link_to_node'] = 1;
++  /* Sort criterion: Node: Post date */
++  $handler->display->display_options['sorts']['created']['id'] = 'created';
++  $handler->display->display_options['sorts']['created']['table'] = 'node';
++  $handler->display->display_options['sorts']['created']['field'] = 'created';
++  $handler->display->display_options['sorts']['created']['order'] = 'DESC';
++  /* Argument: Node: Nid */
++  $handler->display->display_options['arguments']['nid']['id'] = 'nid';
++  $handler->display->display_options['arguments']['nid']['table'] = 'node';
++  $handler->display->display_options['arguments']['nid']['field'] = 'nid';
++  $handler->display->display_options['arguments']['nid']['style_plugin'] = 'default_summary';
++  $handler->display->display_options['arguments']['nid']['default_argument_type'] = 'fixed';
++  /* Filter: Node: Published */
++  $handler->display->display_options['filters']['status']['id'] = 'status';
++  $handler->display->display_options['filters']['status']['table'] = 'node';
++  $handler->display->display_options['filters']['status']['field'] = 'status';
++  $handler->display->display_options['filters']['status']['value'] = '1';
++  $handler->display->display_options['filters']['status']['expose']['operator'] = FALSE;
++  /* Filter: Node: Type */
++  $handler->display->display_options['filters']['type']['id'] = 'type';
++  $handler->display->display_options['filters']['type']['table'] = 'node';
++  $handler->display->display_options['filters']['type']['field'] = 'type';
++  $handler->display->display_options['filters']['type']['value'] = array(
++    'blog' => 'blog',
++  );
++  $handler->display->display_options['filters']['type']['expose']['operator'] = FALSE;
++  
++/* Display: Block: Recent blog posts */
+   $handler = $view->new_display('block', 'Block: Recent blog posts', 'block_1');
+-  $handler->override_option('title', 'Recent blog posts');
+-  $handler->override_option('items_per_page', 5);
+-  $handler->override_option('use_pager', FALSE);
+-  $handler->override_option('use_more', 1);
+-  $handler->override_option('use_more_always', 0);
+-  $handler->override_option('use_more_text', 'View all blog posts');
+-  $handler->override_option('style_options', array());
+-  $handler->override_option('block_description', 'Recent blog posts');
+-  $handler->override_option('block_caching', -1);
++  $handler->display->display_options['defaults']['title'] = FALSE;
++  $handler->display->display_options['title'] = 'Recent blog posts';
++  $handler->display->display_options['defaults']['items_per_page'] = FALSE;
++  $handler->display->display_options['defaults']['use_more'] = FALSE;
++  $handler->display->display_options['use_more'] = TRUE;
++  $handler->display->display_options['use_more_text'] = 'View all blog posts';
++  $handler->display->display_options['defaults']['style_plugin'] = FALSE;
++  $handler->display->display_options['style_plugin'] = 'default';
++  $handler->display->display_options['defaults']['style_options'] = FALSE;
++  $handler->display->display_options['defaults']['row_plugin'] = FALSE;
++  $handler->display->display_options['row_plugin'] = 'fields';
++  $handler->display->display_options['defaults']['row_options'] = FALSE;
++  $handler->display->display_options['block_description'] = 'Recent blog posts';
++  
++/* Display: Page: All blog posts */
+   $handler = $view->new_display('page', 'Page: All blog posts', 'page_1');
+-  $handler->override_option('path', 'blog');
+-  $handler->override_option('menu', array(
+-    'type' => 'normal',
+-    'title' => 'Blog',
+-    'description' => 'View a listing of blog posts.',
+-    'weight' => '0',
+-    'name' => 'primary-links',
+-  ));
+-  $handler->override_option('tab_options', array(
+-    'type' => 'none',
+-    'title' => '',
+-    'description' => '',
+-    'weight' => 0,
+-    'name' => 'navigation',
+-  ));
++  $handler->display->display_options['path'] = 'blog';
++  $handler->display->display_options['menu']['type'] = 'normal';
++  $handler->display->display_options['menu']['title'] = 'Blog';
++  $handler->display->display_options['menu']['description'] = 'View a listing of blog posts.';
++  $handler->display->display_options['menu']['weight'] = '0';
++  $handler->display->display_options['menu']['name'] = 'primary-links';
++  
++/* Display: Page: User blog posts */
+   $handler = $view->new_display('page', 'Page: User blog posts', 'page_2');
+-  $handler->override_option('arguments', array(
+-    'uid' => array(
+-      'default_action' => 'not found',
+-      'style_plugin' => 'default_summary',
+-      'style_options' => array(),
+-      'wildcard' => 'all',
+-      'wildcard_substitution' => 'All',
+-      'title' => '',
+-      'breadcrumb' => '',
+-      'default_argument_type' => 'fixed',
+-      'default_argument' => '',
+-      'validate_type' => 'none',
+-      'validate_fail' => 'not found',
+-      'break_phrase' => 0,
+-      'not' => 0,
+-      'id' => 'uid',
+-      'table' => 'users',
+-      'field' => 'uid',
+-      'validate_user_argument_type' => 'uid',
+-      'validate_user_roles' => array(
+-        '2' => 0,
+-        '3' => 0,
+-        '4' => 0,
+-        '5' => 0,
+-      ),
+-      'override' => array(
+-        'button' => 'Use default',
+-      ),
+-      'relationship' => 'none',
+-      'default_options_div_prefix' => '',
+-      'default_argument_fixed' => '',
+-      'default_argument_user' => 0,
+-      'default_argument_php' => '',
+-      'validate_argument_node_type' => array(
+-        'blog' => 0,
+-        'event' => 0,
+-        'image' => 0,
+-        'page' => 0,
+-        'story' => 0,
+-        'video' => 0,
+-      ),
+-      'validate_argument_node_access' => 0,
+-      'validate_argument_nid_type' => 'nid',
+-      'validate_argument_vocabulary' => array(),
+-      'validate_argument_type' => 'tid',
+-      'validate_argument_transform' => 0,
+-      'validate_user_restrict_roles' => 0,
+-      'validate_argument_php' => '',
+-    ),
+-  ));
+-  $handler->override_option('path', 'user/%/blog');
+-  $handler->override_option('menu', array(
+-    'type' => 'tab',
+-    'title' => 'Blog',
+-    'description' => 'View recent blog entries.',
+-    'weight' => '5',
+-    'name' => 'navigation',
+-  ));
+-  $handler->override_option('tab_options', array(
+-    'type' => 'none',
+-    'title' => '',
+-    'description' => '',
+-    'weight' => 0,
+-    'name' => 'navigation',
+-  ));
++  $handler->display->display_options['defaults']['arguments'] = FALSE;
++  /* Argument: User: Uid */
++  $handler->display->display_options['arguments']['uid']['id'] = 'uid';
++  $handler->display->display_options['arguments']['uid']['table'] = 'users';
++  $handler->display->display_options['arguments']['uid']['field'] = 'uid';
++  $handler->display->display_options['arguments']['uid']['default_action'] = 'not found';
++  $handler->display->display_options['arguments']['uid']['style_plugin'] = 'default_summary';
++  $handler->display->display_options['arguments']['uid']['default_argument_type'] = 'fixed';
++  $handler->display->display_options['arguments']['uid']['break_phrase'] = 0;
++  $handler->display->display_options['arguments']['uid']['not'] = 0;
++  $handler->display->display_options['path'] = 'user/%/blog';
++  $handler->display->display_options['menu']['type'] = 'tab';
++  $handler->display->display_options['menu']['title'] = 'Blog';
++  $handler->display->display_options['menu']['description'] = 'View recent blog entries.';
++  $handler->display->display_options['menu']['weight'] = '5';
++  
++/* Display: Block: Author blog posts */
+   $handler = $view->new_display('block', 'Block: Author blog posts', 'block_2');
+-  $handler->override_option('arguments', array(
+-    'uid' => array(
+-      'default_action' => 'default',
+-      'style_plugin' => 'default_summary',
+-      'style_options' => array(),
+-      'wildcard' => 'all',
+-      'wildcard_substitution' => 'All',
+-      'title' => '',
+-      'breadcrumb' => '',
+-      'default_argument_type' => 'user',
+-      'default_argument' => '',
+-      'validate_type' => 'none',
+-      'validate_fail' => 'not found',
+-      'break_phrase' => 0,
+-      'not' => 0,
+-      'id' => 'uid',
+-      'table' => 'users',
+-      'field' => 'uid',
+-      'validate_user_argument_type' => 'uid',
+-      'validate_user_roles' => array(
+-        '2' => 0,
+-        '3' => 0,
+-        '4' => 0,
+-        '5' => 0,
+-      ),
+-      'override' => array(
+-        'button' => 'Use default',
+-      ),
+-      'relationship' => 'none',
+-      'default_options_div_prefix' => '',
+-      'default_argument_fixed' => '',
+-      'default_argument_user' => 1,
+-      'default_argument_php' => '',
+-      'validate_argument_node_type' => array(
+-        'blog' => 0,
+-        'event' => 0,
+-        'image' => 0,
+-        'video' => 0,
+-        'page' => 0,
+-        'story' => 0,
+-      ),
+-      'validate_argument_node_access' => 0,
+-      'validate_argument_nid_type' => 'nid',
+-      'validate_argument_vocabulary' => array(),
+-      'validate_argument_type' => 'tid',
+-      'validate_argument_transform' => 0,
+-      'validate_user_restrict_roles' => 0,
+-      'validate_argument_php' => '',
+-    ),
+-  ));
+-  $handler->override_option('title', 'Recent blog posts by the same author');
+-  $handler->override_option('items_per_page', 5);
+-  $handler->override_option('use_pager', '0');
+-  $handler->override_option('use_more', 1);
+-  $handler->override_option('use_more_always', 0);
+-  $handler->override_option('use_more_text', 'View all blog posts by this author');
+-  $handler->override_option('block_description', 'Recent blog posts by author');
+-  $handler->override_option('block_caching', -1);
++  $handler->display->display_options['defaults']['title'] = FALSE;
++  $handler->display->display_options['title'] = 'Recent blog posts by the same author';
++  $handler->display->display_options['defaults']['items_per_page'] = FALSE;
++  $handler->display->display_options['defaults']['use_more'] = FALSE;
++  $handler->display->display_options['use_more'] = TRUE;
++  $handler->display->display_options['use_more_text'] = 'View all blog posts by this author';
++  $handler->display->display_options['defaults']['arguments'] = FALSE;
++  /* Argument: User: Uid */
++  $handler->display->display_options['arguments']['uid']['id'] = 'uid';
++  $handler->display->display_options['arguments']['uid']['table'] = 'users';
++  $handler->display->display_options['arguments']['uid']['field'] = 'uid';
++  $handler->display->display_options['arguments']['uid']['default_action'] = 'default';
++  $handler->display->display_options['arguments']['uid']['style_plugin'] = 'default_summary';
++  $handler->display->display_options['arguments']['uid']['default_argument_type'] = 'user';
++  $handler->display->display_options['arguments']['uid']['default_argument_options']['user'] = 1;
++  $handler->display->display_options['arguments']['uid']['break_phrase'] = 0;
++  $handler->display->display_options['arguments']['uid']['not'] = 0;
++  $handler->display->display_options['block_description'] = 'Recent blog posts by author';
++  
++/* Display: Feed */
+   $handler = $view->new_display('feed', 'Feed', 'feed_1');
+-  $handler->override_option('items_per_page', 15);
+-  $handler->override_option('style_plugin', 'rss');
+-  $handler->override_option('style_options', array(
+-    'mission_description' => FALSE,
+-    'description' => '',
+-  ));
+-  $handler->override_option('row_plugin', 'node_rss');
+-  $handler->override_option('path', 'blog.rss');
+-  $handler->override_option('menu', array(
+-    'type' => 'none',
+-    'title' => '',
+-    'description' => '',
+-    'weight' => 0,
+-    'name' => 'navigation',
+-  ));
+-  $handler->override_option('tab_options', array(
+-    'type' => 'none',
+-    'title' => '',
+-    'description' => '',
+-    'weight' => 0,
+-    'name' => 'navigation',
+-  ));
+-  $handler->override_option('displays', array(
++  $handler->display->display_options['defaults']['items_per_page'] = FALSE;
++  $handler->display->display_options['style_plugin'] = 'rss';
++  $handler->display->display_options['style_options']['mission_description'] = FALSE;
++  $handler->display->display_options['row_plugin'] = 'node_rss';
++  $handler->display->display_options['path'] = 'blog.rss';
++  $handler->display->display_options['displays'] = array(
+     'block_1' => 'block_1',
+     'page_1' => 'page_1',
+     'page_2' => 'page_2',
+     'block_2' => 'block_2',
+     'default' => 0,
+-  ));
+-  $handler->override_option('sitename_title', FALSE);
++  );
+ 
+   $views[$view->name] = $view;
+ 
+-- 
+1.7.3.1
+

@@ -1,0 +1,11 @@
+<?php
+// $Id
+
+/**
+* Implements hook_ctools_plugin_directory().
+*/
+function horizontal_accordion_ctools_plugin_directory($module, $plugin) {
+  if ($module == 'page_manager' || $module == 'panels') {
+    return 'plugins/' . $plugin;
+  }
+}

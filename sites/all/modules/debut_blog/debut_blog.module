@@ -1,0 +1,9 @@
+<?php
+
+include_once('debut_blog.features.inc');
+
+/**
+ * Load advanced help provided by helpinject.
+ */
+include_once('debut_blog.helpinjector.inc');
+

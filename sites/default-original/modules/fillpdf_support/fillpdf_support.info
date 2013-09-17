@@ -1,0 +1,5 @@
+; $Id$
+name = Fill PDF Support
+description = Supporting module for fillpdf.ocdevel.com
+package = Other
+core = 6.x
