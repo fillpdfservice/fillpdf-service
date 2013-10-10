@@ -12,8 +12,7 @@ function fillpdf_support_init() {
       if (arg(0) == 'cart') {
         // Clear the cart and redirect to the user's page
         uc_cart_empty(uc_cart_get_id());
-        drupal_set_message(t('Upgrades and downgrades are currently manual. Please <a href="!contact">contact support</a> to change plans.', array('!contact', url('contact'))), 'error');
-        drupal_goto('contact');
+        drupal_goto('https://fillpdf-service.com/faq#qu');
       }
     }
   }
@@ -40,10 +39,9 @@ function fillpdf_support_form_alter(&$form, &$form_state, $form_id){
     global $user;
     if ($user->uid && in_array('FillPDF License', $user->roles) && in_array('grandfathered', $user->roles) === FALSE) {
       $form['submit']['#type'] = 'markup';
-      $form['submit']['#attributes'] = array('title' => t('Contact support to switch'));
+      $form['submit']['#attributes'] = array('title' => t('View FAQ on how to switch plans'));
       $form['submit']['#attributes']['alt'] = $form['submit']['attributes']['title'];
-      $form['submit']['#value'] = t('<a href="!contact">Contact support</a><br />
-          (Upgrades and downgrades are currently manual.)', array('!contact' => url('contact')));
+      $form['submit']['#value'] = t('<a href="!switchfaq">How to switch plans</a>' , array('!switchfaq' => url('faq', array('fragment' => 'qu'))));
     }
   }
 }
