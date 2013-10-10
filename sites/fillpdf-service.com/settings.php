@@ -89,8 +89,10 @@
  *   $db_url = 'mysqli://username:password@localhost/databasename';
  *   $db_url = 'pgsql://username:password@localhost/databasename';
  */
-$db_url = 'mysql://root:vagrant@localhost/fps';
-$db_prefix = '';
+
+// Set these in settings.local.php
+// $db_url = 'mysql://username:password@localhost/databasename';
+// $db_prefix = '';
 
 /**
  * Access control for update.php script
@@ -238,3 +240,6 @@ ini_set('error_reporting',        'E_ALL & ^E_DEPRECATED');
 #   'forum'      => 'Discussion board',
 #   '@count min' => '@count minutes',
 # );
+
+include_once(dirname(__FILE__) . '/settings.local.php');
+
