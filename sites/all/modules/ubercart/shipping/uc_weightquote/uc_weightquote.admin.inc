@@ -45,10 +45,9 @@ function uc_weightquote_admin_methods() {
  * Configure the store default product shipping rates.
  *
  * @ingroup forms
- * @see
- *   uc_weightquote_admin_method_edit_form_validate()
- *   uc_weightquote_admin_method_edit_form_delete()
- *   uc_weightquote_admin_method_edit_form_submit()
+ * @see uc_weightquote_admin_method_edit_form_validate()
+ * @see uc_weightquote_admin_method_edit_form_delete()
+ * @see uc_weightquote_admin_method_edit_form_submit()
  */
 function uc_weightquote_admin_method_edit_form($form_state, $mid = 0) {
   $form = array();
@@ -72,12 +71,14 @@ function uc_weightquote_admin_method_edit_form($form_state, $mid = 0) {
     '#title' => t('Shipping method title'),
     '#description' => t('The name shown to distinguish it from other weightquote methods.'),
     '#default_value' => $method->title,
+    '#required' => TRUE,
   );
   $form['label'] = array(
     '#type' => 'textfield',
     '#title' => t('Line item label'),
     '#description' => t('The name shown to the customer when they choose a shipping method at checkout.'),
     '#default_value' => $method->label,
+    '#required' => TRUE,
   );
   $form['base_rate'] = array(
     '#type' => 'textfield',

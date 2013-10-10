@@ -118,8 +118,8 @@ function ca_ca_action() {
  * @see ca_condition_date_form()
  */
 function ca_condition_date($settings) {
-  $set_date_start = gmmktime(0, 0, 0, $settings['date']['month'], $settings['date']['day'], $settings['date']['year']);
-  $set_date_end = gmmktime(23, 59, 59, $settings['date']['month'], $settings['date']['day'], $settings['date']['year']);
+  $set_date_start = mktime(0, 0, 0, $settings['date']['month'], $settings['date']['day'], $settings['date']['year']);
+  $set_date_end = mktime(23, 59, 59, $settings['date']['month'], $settings['date']['day'], $settings['date']['year']);
 
   $curr_time = time();
 
@@ -390,6 +390,7 @@ function ca_condition_custom_php_form($form_state, $settings = array(), $argumen
     '#title' => t('Custom PHP'),
     '#description' => t('Enter the custom PHP to be evaluated when this condition is executed. Should not include &lt;?php ?> delimiters.'),
     '#default_value' => isset($settings['php']) ? $settings['php'] : '',
+    '#wysiwyg' => FALSE,
   );
 
   return $form;
@@ -465,6 +466,7 @@ function ca_action_custom_php_form($form_state, $settings = array(), $arguments 
     '#title' => t('Custom PHP'),
     '#description' => t('Enter the custom PHP to be evaluated when this action is executed.  Should not include &lt;?php ?> delimiters.'),
     '#default_value' => isset($settings['php']) ? $settings['php'] : '',
+    '#wysiwyg' => FALSE,
   );
 
   return $form;
@@ -534,6 +536,7 @@ function ca_build_email_form($form_state, $settings, $token_filters) {
     '#default_value' => $settings['addresses'],
     '#description' => t('Enter the email addresses to receive the notifications, one on each line. You may use order tokens for dynamic email addresses.'),
     '#required' => TRUE,
+    '#wysiwyg' => FALSE,
   );
   $form['subject'] = array(
     '#type' => 'textfield',
@@ -545,6 +548,7 @@ function ca_build_email_form($form_state, $settings, $token_filters) {
     '#type' => 'textarea',
     '#title' => t('Message'),
     '#default_value' => $settings['message'],
+    '#wysiwyg' => FALSE,
   );
 
   // We add the #is_format element to allow us to locate and configure the filters.

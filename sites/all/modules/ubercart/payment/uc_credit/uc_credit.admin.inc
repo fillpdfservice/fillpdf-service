@@ -3,7 +3,6 @@
 /**
  * @file
  * Credit administration menu items.
- *
  */
 
 /**
@@ -35,6 +34,9 @@ function uc_credit_terminal($order) {
 
 /**
  * Displays the credit card terminal form for administrators.
+ *
+ * @see uc_credit_terminal_form_validate()
+ * @see uc_credit_terminal_form_submit()
  */
 function uc_credit_terminal_form($form_state, $order, $lock_amount = FALSE) {
   // Get the transaction types available to our default gateway.
@@ -117,9 +119,11 @@ function uc_credit_terminal_form($form_state, $order, $lock_amount = FALSE) {
   // Find any uncaptured authorizations.
   $options = array();
 
-  foreach ((array) $order->data['cc_txns']['authorizations'] as $auth_id => $data) {
-    if (empty($data['captured'])) {
-      $options[$auth_id] = t('@auth_id - @date - @amount authorized', array('@auth_id' => strtoupper($auth_id), '@date' => format_date($data['authorized'], 'small'), '@amount' => uc_price($data['amount'], $context)));
+  if (isset($order->data['cc_txns']['authorizations'])) {
+    foreach ($order->data['cc_txns']['authorizations'] as $auth_id => $data) {
+      if (empty($data['captured'])) {
+        $options[$auth_id] = t('@auth_id - @date - @amount authorized', array('@auth_id' => strtoupper($auth_id), '@date' => format_date($data['authorized'], 'small'), '@amount' => uc_price($data['amount'], $context)));
+      }
     }
   }
 
@@ -167,8 +171,10 @@ function uc_credit_terminal_form($form_state, $order, $lock_amount = FALSE) {
   // Log a reference to the order for testing.
   // $order->data = uc_credit_log_reference($order->order_id, substr(md5(time()), 0, 16), '4111111111111111');
 
-  foreach ((array) $order->data['cc_txns']['references'] as $ref_id => $data) {
-    $options[$ref_id] = t('@ref_id - @date - (Last 4) @card', array('@ref_id' => strtoupper($ref_id), '@date' => format_date($data['created'], 'small'), '@card' => $data['card']));
+  if (isset($order->data['cc_txns']['references'])) {
+    foreach ($order->data['cc_txns']['references'] as $ref_id => $data) {
+      $options[$ref_id] = t('@ref_id - @date - (Last 4) @card', array('@ref_id' => strtoupper($ref_id), '@date' => format_date($data['created'], 'small'), '@card' => $data['card']));
+    }
   }
 
   // If any references existed...
@@ -222,6 +228,9 @@ function uc_credit_terminal_form($form_state, $order, $lock_amount = FALSE) {
 
 /**
  * Validation handler for credit terminal form.
+ *
+ * @see uc_credit_terminal_form()
+ * @see uc_credit_terminal_form_submit()
  */
 function uc_credit_terminal_form_validate($form, &$form_state) {
   switch ($form_state['values']['op']) {
@@ -241,6 +250,9 @@ function uc_credit_terminal_form_validate($form, &$form_state) {
 
 /**
  * Submit handler for credit terminal form.
+ *
+ * @see uc_credit_terminal_form()
+ * @see uc_credit_terminal_form_validate()
  */
 function uc_credit_terminal_form_submit($form, &$form_state) {
   // Load the order.
@@ -308,7 +320,7 @@ function uc_credit_terminal_form_submit($form, &$form_state) {
   $result = uc_payment_process('credit', $form_state['values']['order_id'], $form_state['values']['amount'], $data, TRUE, NULL, FALSE);
 
   if ($result) {
-    $crypt = new uc_encryption_class;
+    $crypt = new uc_encryption_class();
 
     // Load up the existing data array.
     $data = db_result(db_query("SELECT data FROM {uc_orders} WHERE order_id = %d", $form_state['values']['order_id']));
@@ -320,13 +332,13 @@ function uc_credit_terminal_form_submit($form, &$form_state) {
       $cc_data = $cache;
     }
     else {
-      $cc_data = array(
-        'cc_number' => substr($cache['cc_number'], -4),
-      );
+      $cc_data = $cache;
+      $cc_data['cc_number'] = substr($cc_data['cc_number'], -4);
+      unset($cc_data['cc_cvv']);
     }
 
     // Stuff the serialized and encrypted CC details into the array.
-    $data['cc_data'] = $crypt->encrypt(uc_credit_encryption_key(), serialize($cc_data));
+    $data['cc_data'] = $crypt->encrypt(uc_credit_encryption_key(), base64_encode(serialize($cc_data)));
     uc_store_encryption_errors($crypt, 'uc_credit');
 
     // Save it again.

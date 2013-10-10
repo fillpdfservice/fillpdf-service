@@ -5,11 +5,9 @@
  * Defines the payment API that lets payment modules interact with Ubercart.
  *
  * The payment system in Ubercart relies on hooks to let the main program know
- * what payment modules are installed and what their current settings are.  The
+ * what payment modules are installed and what their current settings are. The
  * customer can choose a payment type at checkout, and the proper information
  * will be collected to complete the purchase.
- *
- * Development sponsored by the Ubercart project.  http://www.ubercart.org
  */
 
 require_once('uc_payment_checkout_pane.inc');
@@ -194,6 +192,9 @@ function uc_payment_delete_access() {
  */
 function uc_payment_theme() {
   return array(
+    'uc_payment_totals' => array(
+      'arguments' => array('order' => NULL),
+    ),
     'uc_payment_method_table' => array(
       'arguments' => array('form' => NULL),
       'file' => 'uc_payment.admin.inc',
@@ -350,38 +351,7 @@ function uc_payment_get_totals($return = FALSE, $order = NULL) {
 
   if ($order) {
     usort($order->line_items, 'uc_weight_sort');
-
-    $output = t('Order total preview:')
-             .' <span id="order-total-throbber"></span><table>';
-    $grand_total = 0;
-
-    $context = array(
-      'type' => 'line_item',
-      'subject' => array(
-        'order' => $order,
-      ),
-    );
-
-    foreach ($order->line_items as $line) {
-      if (!empty($line['title'])) {
-        $context['revision'] = 'themed';
-        $context['subject']['line_item'] = $line;
-
-        $output .= '<tr><td align="right"><b>'. filter_xss($line['title']) .':</b></td>'
-                  .'<td align="right">'. uc_price($line['amount'], $context) .'</td></tr>';
-
-        if ($line['summed']) {
-          $context['revision'] = 'altered';
-        }
-      }
-    }
-
-    $context['revision'] = 'themed';
-    $context['type'] = 'amount';
-    unset($context['subject']);
-    $output .= '<tr><td align="right"><b>'. t('Order total:') .'</b></td>'
-              .'<td align="right">'. uc_price(uc_order_get_total($order), $context)
-              .'</td></tr></table>';
+    $output = theme('uc_payment_totals', $order);
   }
 
   if ($return) {
@@ -392,14 +362,58 @@ function uc_payment_get_totals($return = FALSE, $order = NULL) {
   exit();
 }
 
+/**
+ * Generates markup for payment totals.
+ *
+ * @ingroup themeable
+ */
+function theme_uc_payment_totals($order) {
+  $output = t('Order total preview:')
+           .' <span id="order-total-throbber"></span><table id="uc-order-total-preview">';
+  $grand_total = 0;
+
+  $context = array(
+    'type' => 'line_item',
+    'subject' => array(
+      'order' => $order,
+    ),
+  );
+
+  foreach ($order->line_items as $line) {
+    if (!empty($line['title'])) {
+      $context['revision'] = 'themed';
+      $context['subject']['line_item'] = $line;
+
+      $attributes = drupal_attributes(array('class' => 'line-item-' . $line['type']));
+      $output .= '<tr' . $attributes . '><td align="right"><b>'. filter_xss($line['title']) .':</b></td>'
+                .'<td align="right">'. uc_price($line['amount'], $context) .'</td></tr>';
+
+      if ($line['summed']) {
+        $context['revision'] = 'altered';
+      }
+    }
+  }
+
+  $context['revision'] = 'themed';
+  $context['type'] = 'amount';
+  unset($context['subject']);
+  $output .= '<tr class="line-item-total"><td align="right"><b>'. t('Order total:') .'</b></td>'
+            .'<td align="right">'. uc_price(uc_order_get_total($order), $context)
+            .'</td></tr></table>';
+
+  return $output;
+}
+
 function uc_payment_get_details($method_id, $view = 'cart', $order = NULL) {
+  global $user;
+
   if ($view == 'cart') {
-    if (!($order = uc_order_load($_SESSION['cart_order']))) {
+    if (!isset($_SESSION['cart_order']) || !($order = uc_order_load($_SESSION['cart_order']))) {
       $_SESSION['cart_order'] = NULL;
       $order = NULL;
     }
 
-    if ($order->order_status != 0 || ($user->uid && $user->uid != $order->uid)) {
+    if (!empty($order) && ($order->order_status != 0 || (!empty($user->uid) && $user->uid != $order->uid))) {
       $order = NULL;
     }
   }
@@ -556,7 +570,7 @@ function uc_payment_process($method, $order_id, $amount, $data = NULL, $default 
       else {
         // Otherwise display an error message to administrators.
         if (user_access('administer store')) {
-          drupal_set_message(t('An error has occurred with your payment gateway.  The charge function could not be found.'));
+          drupal_set_message(t('An error has occurred with your payment gateway. The charge function could not be found.'));
         }
 
         $result['success'] = FALSE;
@@ -577,12 +591,12 @@ function uc_payment_process($method, $order_id, $amount, $data = NULL, $default 
   // If the payment processed successfully...
   if ($result['success'] === TRUE) {
     // Log the payment to the order if not disabled.
-    if ($result['log_payment'] !== FALSE) {
-      uc_payment_enter($order_id, $method, $amount, empty($result['uid']) ? 0 : $result['uid'], $result['data'], $result['comment']);
+    if (!isset($result['log_payment']) || $result['log_payment'] !== FALSE) {
+      uc_payment_enter($order_id, $method, $amount, empty($result['uid']) ? 0 : $result['uid'], empty($result['data']) ? '' : $result['data'], empty($result['comment']) ? '' : $result['comment']);
     }
   }
   else {
-    // Otherwise display the failue message in the logs.
+    // Otherwise display the failure message in the logs.
     watchdog('uc_payment', 'Payment failed for order @order_id: @message', array('@order_id' => $order_id, '@message' => $result['message']), WATCHDOG_WARNING, l(t('view order'), 'admin/store/orders/'. $order_id));
   }
 
@@ -617,8 +631,16 @@ function uc_payment_process($method, $order_id, $amount, $data = NULL, $default 
  *   payment.
  * @param $comment
  *   (optional) The comment to enter in the payment log.
+ * @param $received
+ *   (optional) The timestamp at which the payment was received.
+ *
+ * @return
+ *   A unique ID identifying the payment.
  */
-function uc_payment_enter($order_id, $method, $amount, $uid = 0, $data = NULL, $comment = '') {
+function uc_payment_enter($order_id, $method, $amount, $uid = 0, $data = NULL, $comment = '', $received = NULL) {
+  if ($received == NULL) {
+    $received = time();
+  }
   $method_name = _payment_method_data($method, 'review');
   if (empty($method_name)) {
     $method_name = _payment_method_data($method, 'name');
@@ -641,7 +663,8 @@ function uc_payment_enter($order_id, $method, $amount, $uid = 0, $data = NULL, $
   }
 
   db_query("INSERT INTO {uc_payment_receipts} (order_id, method, amount, uid, data, comment, received) VALUES (%d, '%s', %f, %d, '%s', '%s', %d)",
-    $order_id, $method_name, $amount, $uid, $data, $comment, time());
+    $order_id, $method_name, $amount, $uid, $data, $comment, $received);
+  $receipt_id = db_last_insert_id('uc_payment_receipts', 'receipt_id');
 
   $order = uc_order_load($order_id);
   $account = user_load($uid);
@@ -651,6 +674,8 @@ function uc_payment_enter($order_id, $method, $amount, $uid = 0, $data = NULL, $
 
   module_invoke_all('uc_payment_entered', $order, $method, $amount, $account, $data, $comment);
   ca_pull_trigger('uc_payment_entered', $order, $account);
+
+  return $receipt_id;
 }
 
 /**
@@ -748,6 +773,10 @@ function _payment_method_list($action = NULL) {
   }
 
   $methods = module_invoke_all('payment_method');
+
+  // Allow other modules to alter the payment methods.
+  drupal_alter('payment_method', $methods);
+
   foreach ($methods as $i => $value) {
     $methods[$i]['checkout'] = variable_get('uc_payment_method_'. $methods[$i]['id'] .'_checkout', $methods[$i]['checkout']);
     $methods[$i]['weight'] = variable_get('uc_payment_method_'. $methods[$i]['id'] .'_weight', $methods[$i]['weight']);

@@ -125,11 +125,97 @@ function uc_product_views_data() {
     ),
   );
 
+  $data['uc_products']['length'] = array(
+    'title' => t('Length'),
+    'help' => t('The physical length.'),
+    'field' => array(
+      'additional fields' => array(
+        'field' => 'length_units',
+      ),
+      'handler' => 'uc_product_handler_field_length',
+      'click sortable' => TRUE,
+      'float' => TRUE,
+    ),
+    'sort' => array(
+      'handler' => 'views_handler_sort',
+    ),
+    'filter' => array(
+      'handler' => 'views_handler_filter_float',
+    ),
+  );
+
+  $data['uc_products']['width'] = array(
+    'title' => t('Width'),
+    'help' => t('The physical width.'),
+    'field' => array(
+      'additional fields' => array(
+        'field' => 'length_units',
+      ),
+      'handler' => 'uc_product_handler_field_length',
+      'click sortable' => TRUE,
+      'float' => TRUE,
+    ),
+    'sort' => array(
+      'handler' => 'views_handler_sort',
+    ),
+    'filter' => array(
+      'handler' => 'views_handler_filter_float',
+    ),
+  );
+  $data['uc_products']['height'] = array(
+    'title' => t('Height'),
+    'help' => t('The physical height.'),
+    'field' => array(
+      'additional fields' => array(
+        'field' => 'length_units',
+      ),
+      'handler' => 'uc_product_handler_field_length',
+      'click sortable' => TRUE,
+      'float' => TRUE,
+    ),
+    'sort' => array(
+      'handler' => 'views_handler_sort',
+    ),
+    'filter' => array(
+      'handler' => 'views_handler_filter_float',
+    ),
+  );
+
+  $data['uc_products']['pkg_qty'] = array(
+    'title' => t('Package quantity'),
+    'help' => t('The number of items that fit in the largest package.'),
+    'field' => array(
+      'handler' => 'views_handler_field_numeric',
+      'click sortable' => TRUE,
+    ),
+    'sort' => array(
+      'handler' => 'views_handler_sort',
+    ),
+    'filter' => array(
+      'handler' => 'views_handler_filter_numeric',
+    ),
+  );
+
   $data['uc_products']['ordering'] = array(
     'title' => t('List position'),
     'help' => t('The default sort criteria in the catalog.'),
     'sort' => array(
       'handler' => 'views_handler_sort',
+    ),
+  );
+
+  $data['uc_products']['shippable'] = array(
+    'title' => t('Shippable'),
+    'help' => t('Is the product shippable?'),
+    'field' => array(
+      'handler' => 'views_handler_field_boolean',
+      'click sortable' => TRUE,
+    ),
+    'sort' => array(
+      'handler' => 'views_handler_sort',
+    ),
+    'filter' => array(
+      'handler' => 'views_handler_filter_boolean_operator',
     ),
   );
 
@@ -181,7 +267,6 @@ function uc_product_views_data() {
   return $data;
 }
 
-
 /**
  * Implements hook_views_handlers().
  */
@@ -197,6 +282,9 @@ function uc_product_views_handlers() {
       'uc_product_handler_field_weight' => array(
         'parent' => 'views_handler_field_numeric',
       ),
+      'uc_product_handler_field_length' => array(
+        'parent' => 'views_handler_field_numeric',
+      ),
       'uc_product_handler_filter_product' => array(
         'parent' => 'views_handler_filter_boolean_operator',
       ),
@@ -208,80 +296,4 @@ function uc_product_views_handlers() {
       ),
     ),
   );
-}
-
-
-/**
- * Implements hook_views_tables_alter().
- *
- * Conditionally add editablefields support.
- */
-function uc_product_views_tables_alter(&$tables) {
-  if (module_exists('editablefields')) {
-    if (is_array($tables['uc_products']['fields']['model']['option'])) {
-      $tables['uc_products']['fields']['model']['option']['#options']['editable'] = t('Editable');
-    }
-    else {
-      $tables['uc_products']['fields']['model']['option'] = array(
-        '#type' => 'select',
-        '#options' => array(
-          'display' => t('Display'),
-          'editable' => t('Editable'),
-        ),
-      );
-    }
-    $tables['uc_products']['fields']['model']['form_parents'] = 'base][model';
-    if (is_array($tables['uc_products']['fields']['list_price']['option'])) {
-      $tables['uc_products']['fields']['list_price']['option']['#options']['editable'] = t('Editable');
-    }
-    else {
-      $tables['uc_products']['fields']['list_price']['option'] = array(
-        '#type' => 'select',
-        '#options' => array(
-          'display' => t('Display'),
-          'editable' => t('Editable'),
-        ),
-      );
-    }
-    $tables['uc_products']['fields']['list_price']['form_parents'] = 'base][prices][list_price';
-    if (is_array($tables['uc_products']['fields']['cost']['option'])) {
-      $tables['uc_products']['fields']['cost']['option']['#options']['editable'] = t('Editable');
-    }
-    else {
-      $tables['uc_products']['fields']['cost']['option'] = array(
-        '#type' => 'select',
-        '#options' => array(
-          'display' => t('Display'),
-          'editable' => t('Editable'),
-        ),
-      );
-    }
-    $tables['uc_products']['fields']['cost']['form_parents'] = 'base][prices][cost';
-    if (is_array($tables['uc_products']['fields']['sell_price']['option'])) {
-      $tables['uc_products']['fields']['sell_price']['option']['#options']['editable'] = t('Editable');
-    }
-    else {
-      $tables['uc_products']['fields']['sell_price']['option'] = array(
-        '#type' => 'select',
-        '#options' => array(
-          'display' => t('Display'),
-          'editable' => t('Editable'),
-        ),
-      );
-    }
-    $tables['uc_products']['fields']['sell_price']['form_parents'] = 'base][prices][sell_price';
-    if (is_array($tables['uc_products']['fields']['weight']['option'])) {
-      $tables['uc_products']['fields']['weight']['option']['#options']['editable'] = t('Editable');
-    }
-    else {
-      $tables['uc_products']['fields']['weight']['option'] = array(
-        '#type' => 'select',
-        '#options' => array(
-          'display' => t('Display'),
-          'editable' => t('Editable'),
-        ),
-      );
-    }
-    $tables['uc_products']['fields']['weight']['form_parents'] = 'base][weight';
-  }
 }

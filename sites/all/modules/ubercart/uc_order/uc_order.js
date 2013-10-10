@@ -180,7 +180,8 @@ function load_customer_search_results() {
     {
       first_name: $('#customer-select #edit-first-name').val(),
       last_name: $('#customer-select #edit-last-name').val(),
-      email: $('#customer-select #edit-email').val()
+      email: $('#customer-select #edit-email').val(),
+      username: $('#customer-select #edit-username').val()
     },
     function (contents) {
       $('#customer-select').empty().append(contents);
@@ -381,16 +382,16 @@ function add_product_to_order(order_id, node_id) {
 function fetch_product_data() {
   var pdata = { };
 
-  $('.order-pane-table :input').each(
-    function() {
+  $('#products-container :input').each(function() {
+    if (this.type == 'checkbox') {
+      if (this.checked) {
+        pdata[$(this).attr('name')] = $(this).val();
+      }
+    }
+    else {
       pdata[$(this).attr('name')] = $(this).val();
     }
-  );
-  $('.order-pane-table ~ :input').each(
-    function() {
-      pdata[$(this).attr('name')] = $(this).val();
-    }
-  );
+  });
 
   return pdata;
 }

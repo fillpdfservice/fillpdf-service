@@ -13,3 +13,4 @@ sites/*/settings.local.php
 sites/default-original/files/*
 sites/*/files/*
 sites/*/files-old/*
+sites/all/drush

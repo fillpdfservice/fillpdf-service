@@ -222,12 +222,12 @@ function uc_product_access($op, $node, $account) {
  */
 function uc_product_feature_access($node) {
   global $user;
-  return uc_product_is_product($node) &&
+  return uc_product_is_product($node) && $node->type != 'product_kit' &&
     ((user_access('administer product features') || (user_access('administer own product features') && ($user->uid == $node->uid))));
 }
 
 /**
- * Menu access callback for 'admin/store/products/classes/%uc_product_class/delete'.
+ * Menu access callback for deleting product classes.
  */
 function uc_product_class_delete_access($class) {
   return user_access('administer product classes') && !$class->locked;
@@ -559,20 +559,19 @@ function uc_product_form(&$node) {
     '#size' => 10,
   );
   $form['base']['pkg_qty'] = array(
-    '#type' => 'textfield',
+    '#type' => 'uc_quantity',
     '#title' => t('Package quantity'),
     '#default_value' => isset($node->pkg_qty) ? $node->pkg_qty : 1,
     '#description' => t('At most, how many of these items can fit in your largest box? Orders that exceed this value will be split into multiple packages when retrieving shipping quotes.'),
     '#weight' => 25,
   );
   $form['base']['default_qty'] = array(
-    '#type' => 'textfield',
+    '#type' => 'uc_quantity',
     '#title' => t('Default quantity to add to cart'),
     '#default_value' => isset($node->default_qty) ? $node->default_qty : 1,
-    '#description' => t('Leave blank or zero to disable the quantity field next to the add to cart button, if it is enabled <a href="!settings_url">in general</a>. If it is disabled, this field is ignored.', array('!settings_url' => url('admin/store/settings/products/edit'))),
+    '#description' => t('Use 0 to disable the quantity field next to the add to cart button.'),
     '#weight' => 27,
-    '#size' => 5,
-    '#maxlength' => 6,
+    '#allow_zero' => TRUE,
   );
   $form['base']['ordering'] = array(
     '#type' => 'weight',
@@ -646,14 +645,6 @@ function uc_product_validate($node) {
   foreach (array('weight', 'length', 'width', 'height') as $property) {
     if (!empty($node->$property) && (!is_numeric($node->$property) || $node->$property < 0)) {
       form_set_error($property, t('@property must be a positive number. No commas and only one decimal point.', array('@property' => ucfirst($property))));
-    }
-  }
-  if ($node->default_qty) {
-    if (!is_numeric($node->default_qty)) {
-      form_set_error('default_qty', t('Quantities should be numeric.'));
-    }
-    elseif ($node->default_qty < 0) {
-      form_set_error('default_qty', t("Adding negative items to the cart doesn't make sense, so don't make it easy."));
     }
   }
 }
@@ -861,69 +852,6 @@ function uc_product_preprocess_node(&$variables) {
  * @see uc_product_save_continue_submit()
  */
 function uc_product_form_alter(&$form, $form_state, $form_id) {
-  if ($form_id == 'search_form' && arg(0) == 'admin' && arg(1) == 'store' && arg(2) == 'products' && user_access('use advanced search')) {
-    // Keyword boxes:
-    $form['advanced'] = array(
-      '#type' => 'fieldset',
-      '#title' => t('Advanced search'),
-      '#collapsible' => TRUE,
-      '#collapsed' => TRUE,
-      '#attributes' => array('class' => 'search-advanced'),
-    );
-    $form['advanced']['keywords'] = array(
-      '#prefix' => '<div class="criterion">',
-      '#suffix' => '</div>',
-    );
-    $form['advanced']['keywords']['or'] = array(
-      '#type' => 'textfield',
-      '#title' => t('Containing any of the words'),
-      '#size' => 30,
-      '#maxlength' => 255,
-    );
-    $form['advanced']['keywords']['phrase'] = array(
-      '#type' => 'textfield',
-      '#title' => t('Containing the phrase'),
-      '#size' => 30,
-      '#maxlength' => 255,
-    );
-    $form['advanced']['keywords']['negative'] = array(
-      '#type' => 'textfield',
-      '#title' => t('Containing none of the words'),
-      '#size' => 30,
-      '#maxlength' => 255,
-    );
-
-    // Taxonomy box:
-    if ($taxonomy = module_invoke('taxonomy', 'form_all', 1)) {
-      $form['advanced']['category'] = array(
-        '#type' => 'select',
-        '#title' => t('Only in the category(s)'),
-        '#prefix' => '<div class="criterion">',
-        '#size' => 10,
-        '#suffix' => '</div>',
-        '#options' => $taxonomy,
-        '#multiple' => TRUE,
-      );
-    }
-
-    // Node types:
-    $form['advanced']['type'] = array(
-      '#type' => 'checkboxes',
-      '#title' => t('Only of the type(s)'),
-      '#prefix' => '<div class="criterion">',
-      '#suffix' => '</div>',
-      '#options' => uc_product_type_names(),
-    );
-    $form['advanced']['submit'] = array(
-      '#type' => 'submit',
-      '#value' => t('Advanced search'),
-      '#prefix' => '<div class="action clear-block">',
-      '#suffix' => '</div>',
-    );
-
-    $form['#validate'][] = 'node_search_validate';
-  }
-
   // Add a button to product node forms to continue editing after saving.
   if (uc_product_is_product_form($form)) {
     $form['buttons']['save_continue'] = array(
@@ -1006,7 +934,7 @@ function uc_product_form_node_type_form_alter(&$form, &$form_state) {
 function uc_product_i18nsync_fields_alter($fields, $type) {
   if (uc_product_is_product($type)) {
     $fields['uc_products']['#title'] = t('Product fields');
-    $fields['uc_products']['#options'] = array (
+    $fields['uc_products']['#options'] = array(
       'model' => t('SKU'),
       'list_price' => t('List price'),
       'cost' => t('Cost'),
@@ -1254,10 +1182,9 @@ function uc_product_cart_display($item) {
   $element['#total'] = uc_price($price_info, $context);
   $element['data'] = array('#type' => 'hidden', '#value' => serialize($item->data));
   $element['qty'] = array(
-    '#type' => 'textfield',
+    '#type' => 'uc_quantity',
     '#default_value' => $item->qty,
-    '#size' => 5,
-    '#maxlength' => 6
+    '#allow_zero' => TRUE,
   );
 
   $element['description'] = array('#value' => '');
@@ -1539,7 +1466,6 @@ function theme_uc_product_add_to_cart($node, $teaser = 0, $page = 0) {
  *   A product node.
  *
  * @see uc_product_forms()
- * @see uc_product_add_to_cart_form_validate()
  * @see uc_product_add_to_cart_form_submit()
  * @ingroup forms
  */
@@ -1551,11 +1477,9 @@ function uc_product_add_to_cart_form($form_state, $node) {
 
   if ($node->default_qty > 0 && variable_get('uc_product_add_to_cart_qty', FALSE)) {
     $form['qty'] = array(
-      '#type' => 'textfield',
+      '#type' => 'uc_quantity',
       '#title' => t('Quantity'),
       '#default_value' => $node->default_qty,
-      '#size' => 5,
-      '#maxlength' => 6,
     );
   }
   else {
@@ -1579,17 +1503,6 @@ function uc_product_add_to_cart_form($form_state, $node) {
   uc_form_alter($form, $form_state, __FUNCTION__);
 
   return $form;
-}
-
-/**
- * Allows only positive, numeric quantities.
- *
- * @see uc_product_add_to_cart_form()
- */
-function uc_product_add_to_cart_form_validate($form, &$form_state) {
-  if (!is_numeric($form_state['values']['qty']) || intval($form_state['values']['qty']) <= 0) {
-    form_set_error('qty', t('You have entered an invalid quantity.'));
-  }
 }
 
 /**
@@ -1652,8 +1565,7 @@ function theme_uc_product_dimensions($length, $width, $height, $units = NULL, $t
 }
 
 /**
- * Formats a product's images with imagecache and an image widget
- * (Colorbox, Thickbox, or Lightbox2).
+ * Formats a product's images.
  *
  * @ingroup themeable
  */
@@ -1728,7 +1640,7 @@ function uc_product_type_names() {
  */
 function uc_product_is_product($node) {
   // Load the node object if we received an integer as an argument.
-  if (is_int($node)) {
+  if (is_numeric($node)) {
     $node = node_load($node);
   }
 
@@ -1782,11 +1694,16 @@ function uc_product_is_product_form($form) {
  *   An associative array of model numbers. The key for '- Any -' is the empty
  *   string.
  */
-function uc_product_get_models($node, $add_blank = TRUE) {
+function uc_product_get_models($nid, $add_blank = TRUE) {
+  // Keep backward compatibility with previous versions of 6.x-2.x, where
+  // first argument was a product object.
+  if (is_object($nid)) {
+    $nid = $nid->nid;
+  }
   // Get any modules' SKUs on this node.
-  $models = module_invoke_all('uc_product_models', $node);
+  $models = module_invoke_all('uc_product_models', $nid);
   // Add the base SKU of the node.
-  $models[] = $node->model;
+  $models[] = db_result(db_query("SELECT model FROM {uc_products} WHERE nid = %d", $nid));
 
   // Now we map the SKUs to the keys, for form handling, etc.
   $models = drupal_map_assoc($models);
@@ -1975,8 +1892,7 @@ function uc_product_class_load($class_id = NULL, $reset = FALSE) {
 }
 
 /**
- * Returns a bit of data from a product feature array based on the feature ID
- * and array key.
+ * Returns data for a product feature, based on the feature ID and array key.
  *
  * @param $fid
  *   The string ID of the product feature you want to get data from.
@@ -2041,10 +1957,11 @@ function uc_product_feature_form($form) {
  *
  * @param $data
  *   An array consisting of the following keys:
- *   - pfid: the numeric ID of the product feature when editing an existing one
- *   - nid: the numeric ID of the product node
- *   - fid: the string ID of the feature type
- *   - description: the string description of the feature for the overview table.
+ *   - pfid: (optional) When editing an existing product feature, the numeric
+ *     ID of the feature.
+ *   - nid: The numeric ID of the product node.
+ *   - fid: The string ID of the feature type.
+ *   - description: The string describing the feature for the overview table.
  */
 function uc_product_feature_save($data) {
   if (empty($data['nid']) && arg(0) == 'node' && intval(arg(1)) > 0) {
@@ -2056,7 +1973,7 @@ function uc_product_feature_save($data) {
     }
   }
 
-  if(!empty($data['pfid']) && db_result(db_query("SELECT COUNT(*) FROM {uc_product_features} WHERE pfid = %d", intval($data['pfid'])))) {
+  if (!empty($data['pfid']) && db_result(db_query("SELECT COUNT(*) FROM {uc_product_features} WHERE pfid = %d", intval($data['pfid'])))) {
     // First attempt to update an existing row.
     db_query("UPDATE {uc_product_features} SET description = '%s' WHERE pfid = %d", $data['description'], intval($data['pfid']));
     drupal_set_message(t('The product feature has been updated.'));
@@ -2212,19 +2129,26 @@ function uc_product_add_default_image_field($type = NULL) {
     $types = uc_product_types();
   }
   foreach ($types as $type) {
-    $field['type_name'] = $type;
-
     $field_name = variable_get('uc_image_'. $type, '');
     if (empty($field_name)) {
       $field_name = 'field_image_cache';
     }
-    $field['field_name'] = $field_name;
 
+    // Only add the field if it doesn't exist. Don't overwrite any changes.
     $instances = content_field_instance_read(array('field_name' => $field_name, 'type_name' => $type));
-
     if (count($instances) < 1) {
-      // Only add the field if it doesn't exist. Don't overwrite any changes.
-      content_field_instance_create($field);
+      $prior_instances = content_field_instance_read(array('field_name' => $field_name));
+      if ($prior_instances) {
+        // Copy the prior instance.
+        content_field_instance_create(array('field_name' => $field_name, 'type_name' => $type));
+      }
+      else {
+        // Create a new field and instance.
+        $field['field_name'] = $field_name;
+        $field['type_name'] = $type;
+        content_field_instance_create($field);
+      }
+
       variable_set('uc_image_'. $type, $field_name);
     }
   }
