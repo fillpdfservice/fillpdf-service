@@ -1,0 +1,9 @@
+The code in this directory, save those that are provided by Drupal Core or contributed modules and themes, are under the GNU Affero General Pulic License Version 3. The following notice is to indicate this.
+
+If there is a LICENSE.txt file in a particular directory, then that license applies to any copied files from the parent project. For example, it would *not* apply to sites/fillpdf-service.com/themes/fillpdf_theme/template.php, since this file only contains original code. If in doubt, contact FillPDF Service.
+
+This program is free software; you can redistribute it and/or modify it under the terms of the GNU Affero General Public License version 3 as published by the Free Software Foundation.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of the GNU Affero General Public License along with this program; if not, see http://www.gnu.org/licenses or write to the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301 USA.
+
+The interactive user interfaces in modified source and object code versions of this program must display Appropriate Legal Notices, as required under Section 5 of the GNU Affero General Public License.

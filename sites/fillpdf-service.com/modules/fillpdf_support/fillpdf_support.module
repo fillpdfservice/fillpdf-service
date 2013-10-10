@@ -1,4 +1,10 @@
 <?php
+/**
+ * @license AGPLv3
+ * This is different from most of the other derived code.
+ * See LICENSE.txt in sites/fillpdf-service.com.
+ */
+
 function fillpdf_support_init() {
   global $user;
   if ($user->uid) {

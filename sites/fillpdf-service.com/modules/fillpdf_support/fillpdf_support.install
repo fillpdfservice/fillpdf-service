@@ -1,5 +1,9 @@
 <?php
-// $Id$
+/**
+ * @license AGPLv3
+ * This is different from most of the other derived code.
+ * See LICENSE.txt in sites/fillpdf-service.com.
+ */
 
 /**
  * Implementation of hook_install().
