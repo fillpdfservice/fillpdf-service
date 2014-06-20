@@ -1,3 +1,4 @@
 [submodule "sites/all/modules/fillpdf"]
 	path = sites/all/modules/fillpdf
-	url = wizonesolutions@git.drupal.org:project/fillpdf.git
+	url = git://git.drupal.org/project/fillpdf.git
+  branch = 6.x-1.x
