@@ -313,6 +313,11 @@ function fillpdf_support_merge_pdf($pdf_data, $fields, $api_key, $flatten = TRUE
     return $license->error;
   }
   $account = user_load($license->uid);
+
+  if ($account) {
+    watchdog('fillpdf_support', '%name (IP: @ip) just filled in a PDF. They have %merges merges remaining. Referrer: @ref', array('%name' => $account->name, '%merges' => $license->max - $license->count, '@ref' => referer_uri(), '@ip' => ip_address()));
+  }
+
   $method = (variable_get('fillpdf_local_service', TRUE) ? 'local' : 'pdftk');
   if ($method == 'local') {
     try {
