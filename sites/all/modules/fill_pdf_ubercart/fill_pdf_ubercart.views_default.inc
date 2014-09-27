@@ -19,7 +19,7 @@ function fill_pdf_ubercart_views_default_views() {
 
   /* Display: Defaults */
   $handler = $view->new_display('default', 'Defaults', 'default');
-  $handler->display->display_options['title'] = 'Pricing + Signup';
+  $handler->display->display_options['title'] = 'Choose Your Plan';
   $handler->display->display_options['access']['type'] = 'none';
   $handler->display->display_options['cache']['type'] = 'none';
   $handler->display->display_options['query']['type'] = 'views_query';
@@ -33,15 +33,24 @@ function fill_pdf_ubercart_views_default_views() {
   $handler->display->display_options['style_options']['alignment'] = 'vertical';
   $handler->display->display_options['style_options']['fill_single_line'] = 1;
   $handler->display->display_options['row_plugin'] = 'node';
+  /* Header: Global: Text area */
+  $handler->display->display_options['header']['area']['id'] = 'area';
+  $handler->display->display_options['header']['area']['table'] = 'views';
+  $handler->display->display_options['header']['area']['field'] = 'area';
+  $handler->display->display_options['header']['area']['label'] = 'Prices excluding VAT';
+  $handler->display->display_options['header']['area']['empty'] = FALSE;
+  $handler->display->display_options['header']['area']['content'] = '<strong>Norwegian customers:</strong> Prices are exclusive of VAT. It will be added at checkout.';
+  $handler->display->display_options['header']['area']['format'] = '1';
+  $handler->display->display_options['header']['area']['tokenize'] = 0;
   /* Footer: Global: Text area */
   $handler->display->display_options['footer']['area']['id'] = 'area';
   $handler->display->display_options['footer']['area']['table'] = 'views';
   $handler->display->display_options['footer']['area']['field'] = 'area';
   $handler->display->display_options['footer']['area']['label'] = '';
   $handler->display->display_options['footer']['area']['empty'] = FALSE;
-  $handler->display->display_options['footer']['area']['content'] = '* There is also a <a href="/content/free">free plan</a> ideal for developing or light usage. 100 PDF merges/month, no image-filling support. There is no time limit on the account, and all new user accounts are automatically on this plan.
+  $handler->display->display_options['footer']['area']['content'] = '* <strong>See <a href="/faq">FAQ</a> for additional details about <a href="/content/faq#qi">image-filling support</a>, what is covered by <a href="/content/faq#qe">email support</a>, limitations on <a href="/content/faq#qc">setup help</a>.</strong>
 
-* For additional custom support, <a href="/contact">contact me for rates</a>.  The Premium and Business subscriptions get one free Fill PDF form setup (Webform/CCK-to-PDF mapping, 20 PDF fields maximum, simple mappings). Any bugs or feature requests should go to the <a href="http://drupal.org/project/issues/fillpdf</a>Drupal issue queue</a>, and service-specific issues should go to <a href="/contact">the site contact form</a>. But if you have any additional in-house support needs (such as additional forms, help with an in-house Tomcat setup, etc), feel free to ping me.';
+* <strong>Non-profit? Student? Need more than 2000 monthly merges? Other special situations?</strong> <a href="/contact">Contact us</a> to discuss a special pricing arrangement. We would love to have you as a subscriber!';
   $handler->display->display_options['footer']['area']['format'] = '1';
   $handler->display->display_options['footer']['area']['tokenize'] = 0;
   /* Sort criterion: Product: Sell price */
@@ -55,13 +64,6 @@ function fill_pdf_ubercart_views_default_views() {
   $handler->display->display_options['filters']['type']['value'] = array(
     'product' => 'product',
   );
-  /* Filter: Product: Sell price */
-  $handler->display->display_options['filters']['sell_price']['id'] = 'sell_price';
-  $handler->display->display_options['filters']['sell_price']['table'] = 'uc_products';
-  $handler->display->display_options['filters']['sell_price']['field'] = 'sell_price';
-  $handler->display->display_options['filters']['sell_price']['operator'] = '>';
-  $handler->display->display_options['filters']['sell_price']['value']['value'] = '0';
-  $handler->display->display_options['filters']['sell_price']['allow_null'] = 1;
   /* Filter: Node: Published */
   $handler->display->display_options['filters']['status']['id'] = 'status';
   $handler->display->display_options['filters']['status']['table'] = 'node';
@@ -70,7 +72,7 @@ function fill_pdf_ubercart_views_default_views() {
 
   /* Display: Page */
   $handler = $view->new_display('page', 'Page', 'page_1');
-  $handler->display->display_options['path'] = 'products';
+  $handler->display->display_options['path'] = 'pricing';
 
   $views[$view->name] = $view;
 

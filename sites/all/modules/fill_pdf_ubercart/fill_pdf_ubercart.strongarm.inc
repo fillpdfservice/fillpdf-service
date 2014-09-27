@@ -301,6 +301,13 @@ function fill_pdf_ubercart_strongarm() {
   $strongarm = new stdClass;
   $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
   $strongarm->api_version = 1;
+  $strongarm->name = 'uc_store_vat_number';
+  $strongarm->value = 'NO 999 052 835 MVA';
+  $export['uc_store_vat_number'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
   $strongarm->name = 'upload_product';
   $strongarm->value = '1';
   $export['upload_product'] = $strongarm;
