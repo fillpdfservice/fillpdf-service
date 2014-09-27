@@ -1,5 +1,6 @@
-; $Id$
-name = Fill PDF Support
-description = Supporting module for fillpdf.ocdevel.com
+name = FillPDF Support
+description = Supporting module for FillPDF Service
 package = Other
 core = 6.x
+dependencies[] = uc_taxes
+dependencies[] = uc_payment

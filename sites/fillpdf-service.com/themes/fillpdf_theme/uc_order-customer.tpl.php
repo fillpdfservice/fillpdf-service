@@ -166,10 +166,13 @@
 
                     <tr>
                       <td nowrap="nowrap">
-                        <?php echo t('Products Subtotal:'); ?>&nbsp;
+                        <?php echo t('Products Subtotal' . ($order->billing_country == 578 ? ' (VAT Basis): ' : '')); ?>&nbsp;
                       </td>
                       <td width="98%">
                         <?php echo $order_subtotal; ?>
+                        <?php if ($converted_basis) {
+                          echo " ({$converted_basis})";
+                        } ?>
                       </td>
                     </tr>
 
@@ -192,8 +195,15 @@
                       </td>
                       <td>
                         <?php
-                          $context['subject']['line_item'] = $item;
-                          echo uc_price($item['amount'], $context);
+                        $context['subject']['line_item'] = $item;
+                        echo uc_price($item['amount'], $context);
+
+                        // TODO: Make sure billing country is Norway
+                        if ($item['type'] == 'tax' && $converted_vat) {
+                          // If we just showed VAT, show it again in NOK, but
+                          // only if payment_received or completed.
+                          echo " ({$converted_vat})";
+                        }
                         ?>
                       </td>
                     </tr>
@@ -216,7 +226,7 @@
 
                     <tr>
                       <td colspan="2">
-                        <br /><br /><b><?php echo t('Products on order:'); ?>&nbsp;</b>
+                        <br /><br /><b><?php echo t('Products in order' . ($order->billing_country == 578 ? ' (excl. VAT):' : '')); ?>&nbsp;</b>
 
                         <table width="100%" style="font-family: verdana, arial, helvetica; font-size: small;">
 
@@ -262,6 +272,15 @@
 
                       </td>
                     </tr>
+
+                    <?php if ($order->billing_country == 578 && $fillpdf_support_rate && $fillpdf_support_rate_date): ?>
+                      <tr>
+                        <td colspan="2">
+                          <p>Exchange rate of <b><?php echo $fillpdf_support_rate ?></b> for <b><?php echo $fillpdf_support_rate_date; ?></b> used to display VAT in NOK. Rate from Bank of Norway.</p>
+                        </td>
+                      </tr>
+                    <?php endif; ?>
+
                   </table>
 
                 </td>

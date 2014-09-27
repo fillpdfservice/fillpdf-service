@@ -15,4 +15,3 @@ function fillpdf_theme_preprocess_node(&$variables) {
     unset($variables['submitted']);
   }
 }
-

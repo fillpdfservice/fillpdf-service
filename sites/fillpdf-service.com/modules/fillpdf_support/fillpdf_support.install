@@ -72,6 +72,43 @@ function fillpdf_support_schema() {
     'primary key' => array('uid', 'timestamp'),
   );
 
+  $schema['fillpdf_support_fx'] = array(
+    'fields' => array(
+      'date' => array(
+        'description' => 'The date for which this rate applies in d.m.Y format.',
+        'type' => 'varchar',
+        'length' => 32,
+        'not null' => TRUE,
+      ),
+      'rate' => array(
+        'description' => 'The decimal-separated rate for this date.',
+        'type' => 'numeric',
+        'not null' => TRUE,
+        'precision' => 10,
+        'scale' => 4,
+      ),
+    ),
+    'primary key' => array('date'),
+  );
+
+  $schema['fillpdf_support_order_fx'] = array(
+    'fields' => array(
+      'order_id' => array(
+        'description' => 'The order ID from {uc_orders}.',
+        'type' => 'int',
+        'length' => 11,
+        'not null' => TRUE,
+      ),
+      'date' => array(
+        'description' => 'The date for which this rate applies in d.m.Y format.',
+        'type' => 'varchar',
+        'length' => 32,
+        'not null' => TRUE,
+      ),
+    ),
+    'primary key' => array('order_id'),
+  );
+
   return $schema;
 }
 
@@ -132,10 +169,9 @@ function fillpdf_support_update_6102() {
 }
 
 /**
- * Add {fillpdf_usage} table.
+ * Add {fillpdf_support_usage} table.
  */
 function fillpdf_support_update_6103() {
-  // TODO: Add {fillpdf_usage} table in this update. Get the unprocessed schema,
   // etc. if I can.
   $ret = array();
   $fillpdf_support_usage = drupal_get_schema_unprocessed('fillpdf_support', 'fillpdf_support_usage');
@@ -143,3 +179,24 @@ function fillpdf_support_update_6103() {
   return $ret;
 }
 
+/**
+ * Add {fillpdf_support_fx} table.
+ */
+function fillpdf_support_update_6104() {
+  // etc. if I can.
+  $ret = array();
+  $fillpdf_support_fx = drupal_get_schema_unprocessed('fillpdf_support', 'fillpdf_support_fx');
+  db_create_table($ret, 'fillpdf_support_fx', $fillpdf_support_fx);
+  return $ret;
+}
+
+/**
+ * Add {fillpdf_support_order_fx} table.
+ */
+function fillpdf_support_update_6105() {
+  // etc. if I can.
+  $ret = array();
+  $fillpdf_support_order_fx = drupal_get_schema_unprocessed('fillpdf_support', 'fillpdf_support_order_fx');
+  db_create_table($ret, 'fillpdf_support_order_fx', $fillpdf_support_order_fx);
+  return $ret;
+}

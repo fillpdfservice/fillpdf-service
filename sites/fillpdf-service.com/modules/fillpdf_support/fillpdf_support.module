@@ -392,3 +392,125 @@ function _fillpdf_support_validate_key($api_key) {
 }
 
 //TODO: intercept validators, make sure they don't use existing email on account creation 
+
+/**
+ * Implements hook_preprocess_TEMPLATE().
+ */
+function fillpdf_support_preprocess_uc_order(&$vars) {
+  // Initialize so no template errors.
+  $vars += array(
+    'converted_basis' => '',
+    'converted_vat' => '',
+    'fillpdf_support_rate' => '',
+    'fillpdf_support_rate_date' => '',
+  );
+  // 578 is Norway
+  if ($vars['template'] == 'customer' && $vars['order']->billing_country == 578) {
+    $payments = uc_payment_load_payments($vars['order_id']);
+
+    // Find the VAT amount.
+    foreach ($vars['line_items'] as $item) {
+      if (strpos($item['title'], 'VAT') !== FALSE && $item['type'] == 'tax') {
+        $vat_amount = $item['amount'];
+        break;
+      }
+    }
+
+    // In the off chance there are no payments or no VAT, we can't calculate
+    // MVA. Don't continue.
+    if (!empty($payments) && !empty($vat_amount)) {
+      // Create a DateTime object for the payment date converted to
+      // Norwegian time.
+      $utc_timezone = timezone_open('UTC');
+      $payment_date = date_create('@' . $payments[0]->received, $utc_timezone)->setTimezone(timezone_open('Europe/Oslo'));
+      $prev_search_date = db_result(db_query("select date from {fillpdf_support_order_fx} where order_id = %d", $vars['order_id']));
+      $search_date = $prev_search_date ? $prev_search_date : date_format($payment_date, 'd.m.Y');
+
+      // Check our saved rates first and don't do a request if we already know
+      // the exchange rate. These don't change, and in any case can't change
+      // since the invoice has to represent conditions at the time of order.
+      $rate_query = db_query("select rate from {fillpdf_support_fx} fx where fx.date = '%s'", date_format($search_date, 'd.m.Y'));
+      $rate = db_result($rate_query);
+
+      if (!$rate) {
+        // Look up the exchange rate and display the NOK value rounded to 2
+        // decimal places. Store the exchange rate data for later use.
+        $api_url = variable_get('fillpdf_support_fx_api', NULL);
+        if ($api_url) {
+          $result = drupal_http_request($api_url);
+          if (empty($result->error)) {
+            // Key the array by date.
+            $json = json_decode($result->data);
+            $rates = array();
+            foreach ($json->results->valutakursar as $fx) {
+              $rates[$fx->Dato] = $fx;
+            }
+
+            // Keep decreasing our search date until it matches a key in the
+            // array.
+            // Track how many times we've decreased the date. If we haven't found
+            // a match in 20 iterations, something is wrong with our logic.
+            $iterations = 0;
+            $bug_message = t('Amount in NOK unavailable due to an internal bug in the code. Please contact FillPDF Service about this and tell us your Order #.');
+            while (TRUE) {
+              if ($iterations == 20) {
+                $vars['converted_basis'] = $bug_message;
+                $vars['converted_vat'] = $bug_message;
+                break;
+              }
+
+              if (!empty($rates[$search_date])) {
+                $rate = $rates[$search_date]->Kurs * 1.0;
+                // Save the rate in the database so we will always have it. Use
+                // the payment date as the date so that the actual rate we used
+                // for that date is saved. However, only do this if we aren't
+                // checking today's date. This is because a rate for today
+                // might be published later. Better to hit the API every time.
+                if ($iterations == 0 || $payment_date < (date_create('now', $utc_timezone)->setTime(0, 0, 0))) {
+                  $rate_object = (object) array('date' => $search_date, 'rate' => $rate);
+                  drupal_write_record('fillpdf_support_fx', $rate_object);
+                }
+                break;
+              }
+
+              // If we need a specific date and didn't find it, then don't loop
+              // again. Alert to the bug, as well.
+              if ($prev_search_date) {
+                $vars['converted_basis'] = $bug_message;
+                $vars['converted_vat'] = $bug_message;
+                break;
+              }
+
+              $iterations++;
+
+              // Use the iterations to determine how many days back we check
+              // for the next search date.
+              $search_date = date_format(date_sub(clone $payment_date, new DateInterval("P{$iterations}D")), 'd.m.Y');
+            }
+          }
+          else {
+            $unavailable_message = t('Amount in NOK temporarily unavailable. Refresh the page or, if this is an email, check your invoice on the site again later.');
+            $vars['converted_basis'] = $unavailable_message;
+            $vars['converted_vat'] = $unavailable_message;
+          }
+        }
+      }
+
+      if ($rate) {
+        // If $prev_search_date is not set, then save info about the rate we
+        // used for this order to {fillpdf_support_order_fx}.
+        if (!$prev_search_date) {
+          $order_fx = (object) array('order_id' => $vars['order_id'], 'date' => $search_date);
+          drupal_write_record('fillpdf_support_order_fx', $order_fx);
+        }
+
+        // End values are rounded to two decimal places (to the nearest
+        // Norwegian øre).
+        $vars['converted_basis'] = round(($vars['order_subtotal_raw'] * $rate) * 100) / 100 . ' NOK';
+        $vars['converted_vat'] = round(($vat_amount * $rate) * 100) / 100 . ' NOK';
+        $vars['fillpdf_support_rate'] = $rate;
+        $vars['fillpdf_support_rate_date'] = $search_date;
+      }
+    }
+  }
+}
