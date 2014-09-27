@@ -461,15 +461,14 @@ function fillpdf_support_preprocess_uc_order(&$vars) {
 
               if (!empty($rates[$search_date])) {
                 $rate = $rates[$search_date]->Kurs * 1.0;
-                // Save the rate in the database so we will always have it. Use
-                // the payment date as the date so that the actual rate we used
-                // for that date is saved. However, only do this if we aren't
-                // checking today's date. This is because a rate for today
-                // might be published later. Better to hit the API every time.
-                if ($iterations == 0 || $payment_date < (date_create('now', $utc_timezone)->setTime(0, 0, 0))) {
-                  $rate_object = (object) array('date' => $search_date, 'rate' => $rate);
-                  drupal_write_record('fillpdf_support_fx', $rate_object);
-                }
+                // Save the rate in the database so we will always have it.
+                // Note that we save the rate we USED, not the payment date.
+                // This is because we also save the date we used against the
+                // order ID. So if a rate is published later in the day,
+                // that's fine; we will do a fresh lookup and store the new
+                // rate in this table.
+                $rate_object = (object) array('date' => $search_date, 'rate' => $rate);
+                drupal_write_record('fillpdf_support_fx', $rate_object);
                 break;
               }
 
