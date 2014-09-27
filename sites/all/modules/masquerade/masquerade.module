@@ -24,7 +24,7 @@ function masquerade_help($path, $arg) {
  * @return array
  */
 function masquerade_perm() {
-  return array('masquerade as user', 'masquerade as admin', 'administer masquerade');
+  return array('masquerade as user', 'masquerade as any user', 'masquerade as admin', 'administer masquerade');
 }
 
 /**
@@ -193,8 +193,9 @@ function masquerade_access($type, $uid = NULL) {
         if (!is_numeric($uid)) {
           return FALSE;
         }
-        $account = user_load(array('uid' => $uid));
-        $switch_to_account = db_result(db_query("SELECT TRUE FROM {masquerade_users} WHERE uid_from = %d AND uid_to = %d", $user->uid, $account->uid));
+        if ($account = user_load(array('uid' => $uid))) {
+          $switch_to_account = db_result(db_query("SELECT TRUE FROM {masquerade_users} WHERE uid_from = %d AND uid_to = %d", $user->uid, $account->uid));
+        }
       }
       return !isset($_SESSION['masquerading']) && (user_access('masquerade as user') || user_access('masquerade as admin') || $switch_to_account);
       break;
@@ -337,7 +338,17 @@ function masquerade_user($op, &$edit, &$edit_user, $category = NULL) {
         'masquerade as user';
 
       global $user;
-      if (user_access($perm) && empty($edit_user->masquerading) && $user->uid != $edit_user->uid) {
+
+      // Query allowed uids so the "masquerade as <user>" link can be shown or
+      // hidden.
+      $allowed_uids = array();
+      $result = db_query("SELECT uid_to FROM {masquerade_users} WHERE uid_from = %d", $user->uid);
+      while ($uid_to = db_result($result)) {
+        $allowed_uids[] = $uid_to;
+      }
+
+      $can_masquerade_as_user = in_array($edit_user->uid, $allowed_uids) || user_access('masquerade as any user');
+      if (user_access($perm) && empty($edit_user->masquerading) && $user->uid != $edit_user->uid && $can_masquerade_as_user) {
         $edit_user->content['Masquerade'] = array('#value' => l(t('Masquerade as !user', array('!user' => $edit_user->name)), 'masquerade/switch/'. $edit_user->uid, array('query' => array('token' => drupal_get_token('masquerade/switch/'. $edit_user->uid)), 'destination' => $_GET['q'], 'attributes' => array('class' => 'masquerade-switch'))),
           '#weight' => 10
         );
@@ -509,12 +520,23 @@ function masquerade_block_1_validate($form, &$form_state) {
   global $user;
   unset($form);
   $name = $form_state['values']['masquerade_user_field'];
+  $allowed = FALSE;
+
+  $to_uid = db_result(db_query("SELECT uid FROM {users} WHERE name = '%s'", $name));
+  if ($to_uid !== FALSE) {
+    $allowed = user_access('masquerade as any user') || db_result(db_query("SELECT uid_to FROM {masquerade_users} WHERE uid_from = %d and uid_to = %d", $user->uid, $to_uid));
+  }
+
   if ($name == variable_get('anonymous', t('Anonymous'))) {
     $name = '';
   }
   if (isset($_SESSION['masquerading'])) {
     form_set_error('masquerade_user_field', t('You are already masquerading. Please <a href="@unswitch">switch back</a> to your account to masquerade as another user.', array('@unswitch' => url('masquerade/unswitch', array('query' => array('token' => drupal_get_token('masquerade/unswitch')))))));
   }
+  if ($allowed === FALSE) {
+    form_set_error('masquerade_user_field', t('You are not allowed to masquerade as the selected user.'));
+  }
+
   if (!empty($name) && module_exists('alt_login')) {
     $alt_login = db_fetch_object(db_query("SELECT u.name FROM {users} u INNER JOIN {alt_login} al ON u.uid = al.uid WHERE al.alt_login = '%s'", $name));
     if ($alt_login->name) {

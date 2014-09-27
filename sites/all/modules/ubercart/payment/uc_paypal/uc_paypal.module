@@ -5,9 +5,9 @@
  * Integrates various PayPal payment services and Instant Payment Notifications
  * (IPN) with Ubercart!
  *
- * You should turn on IPN Notifications in your PayPal profile but leave the
- * IPN URL blank.  This allows the module to specify an IPN URL when it directs
- * payments through PayPal that includes the order ID for debugging purposes.
+ * You should turn on Instant Payment Notifications in your PayPal profile and
+ * set the IPN URL to http://{yoursite.com}/uc_paypal/ipn. See
+ * https://drupal.org/node/1311198 for further information.
  *
  * If you have not yet signed up for your PayPal account, please support
  * Ubercart by using the following link.  Thank you!
@@ -368,10 +368,13 @@ function uc_paypal_wpp_charge($order_id, $amount, $data) {
       $delivery_country = array(0 => array('country_iso_code_2' => 'US'));
     }
 
+    // Paypal doesn't accept IPv6 addresses.
+    $ip_address = ltrim(ip_address(), '::ffff:');
+
     $nvp_request = array(
       'METHOD' => 'DoDirectPayment',
       'PAYMENTACTION' => $data['txn_type'] == UC_CREDIT_AUTH_ONLY ? 'Authorization' : 'Sale',
-      'IPADDRESS' => ip_address(),
+      'IPADDRESS' => $ip_address,
       'AMT' => uc_price($amount, $context, $options),
       'CREDITCARDTYPE' => $cc_type,
       'ACCT' =>  $order->payment_details['cc_number'],
@@ -685,7 +688,7 @@ function uc_paypal_ec_checkout($form, &$form_state) {
     'CANCELURL' => url('uc_paypal/wps/cancel', array('absolute' => TRUE)),
     'AMT' => uc_price($order->order_total, $context, $options),
     'CURRENCYCODE' => variable_get('uc_paypal_wpp_currency', 'USD'),
-    'PAYMENTACTION' => variable_get('uc_paypal_wpp_payment_action', 'Sale'),
+    'PAYMENTACTION' => variable_get('uc_pg_paypal_wpp_cc_txn_type', 'auth_capture') == 'authorize' ? 'Authorization' : 'Sale',
     'DESC' => substr($desc, 0, 127),
     'INVNUM' => $order->order_id .'-'. time(),
     'REQCONFIRMSHIPPING' => variable_get('uc_paypal_ec_rqconfirmed_addr', 0),
@@ -780,7 +783,7 @@ function uc_paypal_ec_form_submit($form, &$form_state) {
     'CANCELURL' => url('uc_paypal/wps/cancel', array('absolute' => TRUE)),
     'AMT' => uc_price($subtotal, $context, $options),
     'CURRENCYCODE' => variable_get('uc_paypal_wpp_currency', 'USD'),
-    'PAYMENTACTION' => variable_get('uc_paypal_wpp_payment_action', 'Sale'),
+    'PAYMENTACTION' => variable_get('uc_pg_paypal_wpp_cc_txn_type', 'auth_capture') == 'authorize' ? 'Authorization' : 'Sale',
     'DESC' => substr($desc, 0, 127),
     'INVNUM' => $order->order_id .'-'. time(),
     'REQCONFIRMSHIPPING' => variable_get('uc_paypal_ec_rqconfirmed_addr', 0),
@@ -855,7 +858,7 @@ function uc_paypal_ec_submit_form_submit($form, &$form_state) {
   $nvp_request = array(
     'METHOD' => 'DoExpressCheckoutPayment',
     'TOKEN' => $_SESSION['TOKEN'],
-    'PAYMENTACTION' => variable_get('uc_paypal_wpp_payment_action', 'Sale'),
+    'PAYMENTACTION' => variable_get('uc_pg_paypal_wpp_cc_txn_type', 'auth_capture') == 'authorize' ? 'Authorization' : 'Sale',
     'PAYERID' => $_SESSION['PAYERID'],
     'AMT' => uc_price($order->order_total, $context, $options),
     'DESC' => substr($desc, 0, 127),
