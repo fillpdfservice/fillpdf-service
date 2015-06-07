@@ -168,7 +168,7 @@ function fillpdf_support_cron(){
   $timestamp = time();
 
   // run once a month.  See if last cron run was this month
-  $last_run = db_result(db_query('select timestamp from {watchdog} where type="cron" order by timestamp desc limit 1'));
+  $last_run = variable_get('cron_last', 0);
 
   // Allow simulating a fake month to test archival.
   $fake_month = variable_get('fillpdf_support_debug_archival_month', NULL);
@@ -193,11 +193,15 @@ function fillpdf_support_archive($timestamp) {
   $fillpdf_support_records = db_query($fillpdf_support_query);
 
   while ($fillpdf_support = db_fetch_object($fillpdf_support_records)) {
-    $fillpdf_usage = new stdClass();
-    $fillpdf_usage->uid = $fillpdf_support->uid;
-    $fillpdf_usage->count = $fillpdf_support->count;
-    $fillpdf_usage->timestamp = $timestamp;
-    drupal_write_record('fillpdf_support_usage', $fillpdf_usage);
+    // Skip 0-records. We can reconstruct these later if we need to, but
+    // they take up a lot of space.
+    if ($fillpdf_support->count) {
+      $fillpdf_usage = new stdClass();
+      $fillpdf_usage->uid = $fillpdf_support->uid;
+      $fillpdf_usage->count = $fillpdf_support->count;
+      $fillpdf_usage->timestamp = $timestamp;
+      drupal_write_record('fillpdf_support_usage', $fillpdf_usage);
+    }
   }
 }
 
