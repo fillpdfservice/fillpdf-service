@@ -357,7 +357,8 @@ function fillpdf_support_merge_pdf($pdf_data, $fields, $api_key, $flatten = TRUE
       }
     }
     catch (JavaException $e) {
-      drupal_set_message(java_truncate((string)$e), 'error');
+      $java_error = java_truncate((string)$e);
+      watchdog('fillpdf_support', "Was unable to merge a user's PDF data! Please troubleshoot! Error text: !e", array('!e' => java_truncate((string)($e))), WATCHDOG_ERROR);
       drupal_goto(); //after setting error message
     }
   }
