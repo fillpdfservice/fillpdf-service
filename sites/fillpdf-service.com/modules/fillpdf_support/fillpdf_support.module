@@ -339,27 +339,38 @@ function fillpdf_support_merge_pdf($pdf_data, $fields, $api_key, $flatten = TRUE
           }
         }
         else {
-          $fillpdf->text($key, $field);
+//          $fillpdf->text($key, $field);
         }
       }
     }
     catch (JavaException $e) {
-      watchdog('fillpdf_support', "Was unable to merge a user's PDF data! Please troubleshoot! Error text: !e", array('!e' => java_truncate((string)($e))), WATCHDOG_ERROR);
+      watchdog('fillpdf_support', "Was unable to merge a user's PDF data (Exception)! Please troubleshoot! Error text: !e", array('!e' => java_truncate((string)($e))), WATCHDOG_ERROR);
       file_delete($image_bytes);
       return array('error' => java_truncate((string)$e));
     }
+    catch (Exception $other_e) {
+      watchdog('fillpdf_support', "Was unable to merge a user's PDF data (Exception)! Please troubleshoot! Java error text: !e, normal error text: !oe", array('!e' => java_truncate((string)($other_e)), '!oe' => $other_e->getMessage()), WATCHDOG_ERROR);
+      file_delete($image_bytes);
+      return array('error' => $other_e->getCode() . ': ' . $other_e->getMessage());
+    }
     try {
       if ($flatten) {
-        $byte_array = java_values($fillpdf->toByteArray());
+        $java_byte_array = $fillpdf->toByteArray();
+        $byte_array = java_values($java_byte_array);
       }
       else {
-        $byte_array = java_values($fillpdf->toByteArrayUnflattened());
+        $java_byte_array = $fillpdf->toByteArrayUnflattened();
+        $byte_array = java_values($java_byte_array);
       }
     }
     catch (JavaException $e) {
-      $java_error = java_truncate((string)$e);
-      watchdog('fillpdf_support', "Was unable to merge a user's PDF data! Please troubleshoot! Error text: !e", array('!e' => java_truncate((string)($e))), WATCHDOG_ERROR);
-      drupal_goto(); //after setting error message
+      watchdog('fillpdf_support', "Was unable to merge a user's PDF data (JavaException)! Please troubleshoot! Error text: !e", array('!e' => java_truncate((string)($e))), WATCHDOG_ERROR);
+      return array('error' => java_truncate((string)$e));
+    }
+    catch (Exception $other_e) {
+      watchdog('fillpdf_support', "Was unable to merge a user's PDF data (Exception)! Please troubleshoot! Java error text: !e, normal error text: !oe", array('!e' => java_truncate((string)($other_e)), '!oe' => $other_e->getMessage()), WATCHDOG_ERROR);
+      file_delete($image_bytes);
+      return array('error' => $other_e->getCode() . ': ' . $other_e->getMessage());
     }
   }
   else {
