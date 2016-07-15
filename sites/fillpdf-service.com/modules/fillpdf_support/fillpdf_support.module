@@ -339,7 +339,7 @@ function fillpdf_support_merge_pdf($pdf_data, $fields, $api_key, $flatten = TRUE
           }
         }
         else {
-//          $fillpdf->text($key, $field);
+          $fillpdf->text($key, $field);
         }
       }
     }
